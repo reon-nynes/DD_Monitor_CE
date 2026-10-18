@@ -259,3 +259,106 @@ The following is the exhaustive decision record, in execution order, including e
 - Final: Ruling: hot reload, other platform credential adapters and recharge/subscription/SC/special flow execution remain outside this feature — approved scope retains restart behavior and disables unsupported gifts — cost if wrong: those workflows need separate implementation rather than silently acting as ordinary gifts.
 
 Deferred minors: none. The reviewer noted compressed formatting but did not raise a separate style/refactor finding. This plan record and Git history preserve the execution evidence after removing only this plan's ignored scratch workspace.
+
+## Follow-up: seven UI fixes (2026-10-18)
+
+The user requested tighter status/input spacing, faster and consistently positioned
+pickers, unified rounded window/button behavior, click-driven quantities, inline
+gift-send progress, and fixes for three Qt warning classes. Implementation remains
+on the same two local feature branches.
+
+| Repository / branch | Follow-up implementation commits |
+| --- | --- |
+| Host `codex/plugin-tile-extensions` | `040dc6b` status width follows its actual text, keeping the input beside short status labels |
+| Plugin `codex/bili-live` | `178daf5` shared anchored pickers, parallel media, quantity interactions, inline send feedback and worker cleanup; `ca412ad` event-filter safety during Qt destruction and Python cyclic GC |
+
+### Delivered behavior
+
+- Both pickers use the same rounded, frameless tool-window base and shared card/tab
+  styles. They center above their anchor, flip/clamp when necessary, follow owner
+  movement, and pass outside presses through to the original target. Native title
+  bar dragging preserves visible pickers and quantities.
+- Emoticon loading uses up to four independent image requests; the shared HTTP
+  limit and gift loader also permit four. Existing caches are reused, gift static
+  thumbnails precede GIFs, and repeated image paths do not restart animations.
+- Gifts are the default tab even when bag data arrives first. Empty idle status
+  is hidden. Quantity options open on a gift click, not hover; the panel is 168px
+  wide, puts 1 in the input when allowed, and omits a duplicate 1 button. A second
+  click on the same gift sends one when permitted; moving to another gift closes
+  quantities, with a short grace period across the gap to the quantity panel.
+- Sending progress and failure messages follow the battery balance; success clears
+  progress and refreshes balance. Long failures wrap without expanding off screen.
+- Empty media paths no longer reach QMovie file opening; tool windows have valid
+  top-level owners; workers are joined before retirement. Deferred media callbacks
+  are cancelled and host-owned pickers deleted on tile shutdown. Application event
+  filters check native target validity and Python state before processing events.
+
+### Follow-up verification
+
+| Check | Result |
+| --- | --- |
+| Send / composer / emoticons / lifecycle | 13 / 16 / 18 / 5 passed |
+| Gift API / controller / media / popup / picker UX | 14 / 8 / 4 / 10 / 14 passed |
+| Rebuilt ZIP installed into actual offline-patched Windows MainWindow | 6 passed; exit 0 |
+| Total bili_live unit and installed integration tests | 108 passed |
+| Windows real-VLC checks on rebuilt ZIP | Dark/light, 900/360/200 widths, native hit targets, GIFs, quantity gap, focus/IME; effective DPR 1.5 and 2.25, both exit 0 |
+| High-DPI picker UX | 14 passed; exit 0 |
+| Host plugin controls | 9 passed; includes observed RED→GREEN short-status spacing regression |
+| Additional host checks during this follow-up | Credentials 7, cookies 9, bottom-bar order, fullscreen native focus, repository files 3 and repository map 5 passed |
+| Packages / upgrade / original platform checks | Package CRC and source byte equality, historical upgrade and five original platform regression scripts passed |
+| Changed Python sources, compiled in memory | Host 12 and plugin repository 26 passed |
+| Patch whitespace | Both repositories pass `git diff --check` |
+
+The final full unit run was also checked for callback exceptions and the three
+reported warning strings instead of relying solely on unittest's exit code.
+Installed integration captures and asserts absence of empty-file-name,
+non-top-level-window and QThreadStorage warnings. A finalization run initially
+printed a deleted EmoticonPopup callback despite passing assertions; it was not
+accepted as clean. Two new tests reproduced direct parent destruction and Python
+GC teardown errors, then passed after `ca412ad`. A separate 40-iteration stress
+probe for each of direct, deferred, owner and GC deletion found no callback errors.
+
+### Independent incremental review and fixes
+
+One fresh-context read-only reviewer examined this follow-up across both branches.
+Verdict: **With fixes**, zero Critical, three Important. The author accepted and
+fixed all three with observed failing-then-passing regressions:
+
+1. Explicitly delete pickers owned by MainWindow when their composer shuts down.
+2. Default quantities to one despite service counts ordered as 10, 1, 99, while
+   respecting services that forbid one and permit only listed counts.
+3. Constrain/wrap long inline failures and reanchor the popup after layout changes.
+
+The reviewer did not re-review the fixes; the author ran the final tests above.
+No deferred minors. The additional Qt/GC finalization fix was author-diagnosed
+and regression-tested after that review. Native theme inspection also caught
+undersized quantity buttons; their usable height now has a regression test.
+
+### Follow-up rulings and limits
+
+- Ruling: preserve service quantity restrictions when the user requests a default
+  of one — use one whenever allowed, otherwise the first permitted count, and never
+  fabricate an unauthorized single send — cost if wrong: some gifts intentionally
+  cannot use the requested one-click path.
+- Ruling: retain `[关闭]` as an ordinary existing close-timing log — it is not a Qt
+  warning and does not identify a failure — cost if wrong: timing-log preferences
+  need a separate logging change.
+- Ruling: judge loading improvements by bounded concurrent progress and cache reuse,
+  not by a synthetic CDN speed claim — real authenticated service and network
+  latency remain unverified — cost if wrong: a real CDN/account bottleneck may need
+  further measurement. No real text/gift send was used for verification.
+- Ruling: keep original historical published artifacts intact — website tests still
+  have two existing failures for absent original v1.0 release ZIPs; page/link/asset
+  checks pass — cost if wrong: complete website validation awaits authentic archives.
+- The review set aside authenticated wallet/bag/live sends, actual CDN timing,
+  mixed-monitor DPI and native VLC behavior. Primary checks cover native VLC and
+  two fixed scaling settings; authenticated actions, actual CDN timing and moving
+  between monitors remain unverified. Some VLC MPEG4 `get_buffer` diagnostics still
+  occur at successful teardown; the three targeted Qt warning classes did not recur
+  in tested flows. The earlier existing match_sync `analysis_size` failure was not
+  rerun during this follow-up and is not claimed fixed.
+
+Final installable artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `184bc737168ad3d313538761eb2ccc4d27e665cb7c3b6a0ec48d020e0a383649`.
+The artifact includes the final README and source files. Both branches are retained
+locally; no push, merge or release, and the pre-existing `.codegraph/` is untouched.
