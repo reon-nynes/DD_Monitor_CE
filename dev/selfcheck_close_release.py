@@ -20,6 +20,7 @@
 """
 import inspect
 import os
+import subprocess
 import sys
 import time
 
@@ -66,6 +67,7 @@ def main() -> None:
         sys.stdout.reconfigure(errors="replace")
     except Exception:  # noqa: BLE001
         pass
+    check_qt_exit_cleanup()
     bili.play_url = boom
     app_module.StatusPoller = SilentPoller
     app_module.StatsPoller = SilentPoller
@@ -147,6 +149,88 @@ def main() -> None:
     print("  源码顺序 hide < 钉住关窗 < release，且关窗后窗口不可见")
 
     print("\n全部通过")
+
+
+def check_qt_exit_cleanup():
+    """Exercise production main(), including its direct process exit."""
+    script = r'''
+import os
+if os.name == 'nt':
+    import ctypes
+    ctypes.windll.kernel32.SetErrorMode(0x8003)
+from unittest.mock import patch
+from PySide6.QtCore import QTimer, qInstallMessageHandler
+from PySide6.QtWidgets import QLabel
+from ddm import app as module
+class Window(QLabel):
+    _update_plan = None
+    _restart_requested = False
+    def __init__(self, *args, **kwargs):
+        super().__init__('退出测试 Exit')
+        QTimer.singleShot(30, self.close)
+qInstallMessageHandler(lambda kind, context, message: print(message, flush=True))
+with patch.object(module, 'setup_file_log', return_value=''), \
+     patch.object(module.config_module, 'load', return_value={'settings': {'auto_update': False}}), \
+     patch.object(module, 'MainWindow', Window), \
+     patch.object(module.TilePlayer, 'warm_up_vlc'), \
+     patch.object(module.watchdog, 'start'), \
+     patch.object(module.overlay, 'module_paths', return_value=[]), \
+     patch('ddm.user_notice.confirm_user_notice'), \
+     patch('ddm.update_install.clean_previous'):
+    module.main(['selfcheck'])
+'''
+    result = subprocess.run([sys.executable, '-c', script], cwd=REPO,
+                            capture_output=True, text=True, timeout=20)
+    assert result.returncode == 0, result.stderr
+    assert 'QThreadStorage:' not in result.stdout + result.stderr, result.stdout + result.stderr
+    print('PASS: production process exit releases GUI-thread Qt storage')
+    actual_window = '''class Window(module.MainWindow):
+    def __init__(self, *args, **kwargs):
+        with patch.object(module.QTimer, 'singleShot'), \\
+             patch.object(module.MainWindow, 'refresh_account'), \\
+             patch.object(module.MainWindow, 'sync_danmaku'):
+            super().__init__(*args, **kwargs)
+        tile = self.wall.tiles[0]
+        self.players[tile] = module.TilePlayer(tile.video, self)
+        QTimer.singleShot(30, self.close)
+'''
+    actual_script = script[:script.index('class Window(')] + actual_window + script[script.index('qInstallMessageHandler('):]
+    result = subprocess.run([sys.executable, '-c', actual_script], cwd=REPO,
+                            capture_output=True, text=True, timeout=25)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert '[关闭]' in result.stderr, result.stderr
+    assert 'QThreadStorage:' not in result.stdout + result.stderr, result.stdout + result.stderr
+    print('PASS: real MainWindow/VLC release and QApplication destruction exit cleanly')
+    slow_window = actual_window.replace('        QTimer.singleShot(30, self.close)', '''        from PySide6.QtCore import QThread
+        class SlowAvatar(QThread):
+            def run(self):
+                self.msleep(6000)
+                print('slow worker finished', flush=True)
+        self._account_avatar_loader = SlowAvatar(self)
+        self._account_avatar_loader.start()
+        QTimer.singleShot(30, self.close)''')
+    slow_script = script[:script.index('class Window(')] + slow_window + script[script.index('qInstallMessageHandler('):]
+    result = subprocess.run([sys.executable, '-c', slow_script], cwd=REPO,
+                            capture_output=True, text=True, timeout=25)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'slow worker finished' in result.stdout, result.stdout + result.stderr
+    assert 'QThreadStorage:' not in result.stdout + result.stderr, result.stdout + result.stderr
+    print('PASS: slow owned worker finishes before QApplication destruction')
+    idle_window = actual_window.replace('        QTimer.singleShot(30, self.close)', '''        from PySide6.QtCore import QThread
+        class IdleWorker(QThread):
+            def run(self):
+                super().run()
+                print('idle worker finished', flush=True)
+        self._test_idle_worker = IdleWorker(self)
+        self._test_idle_worker.start()
+        QTimer.singleShot(30, self.close)''')
+    idle_script = script[:script.index('class Window(')] + idle_window + script[script.index('qInstallMessageHandler('):]
+    result = subprocess.run([sys.executable, '-c', idle_script], cwd=REPO,
+                            capture_output=True, text=True, timeout=12)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert 'idle worker finished' in result.stdout, result.stdout + result.stderr
+    assert 'QThreadStorage:' not in result.stdout + result.stderr, result.stdout + result.stderr
+    print('PASS: owned event-loop worker quits before QApplication destruction')
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ import webbrowser
 from urllib.parse import urlsplit
 
 from PySide6.QtCore import (QByteArray, QEasingCurve, QProcess, QPropertyAnimation,
-                           QPoint, Qt, QtMsgType, QTimer, qInstallMessageHandler)
+                           QPoint, Qt, QtMsgType, QThread, QTimer, qInstallMessageHandler)
 from PySide6.QtGui import QCursor, QIcon, QKeySequence, QPixmap, QShortcut
 from PySide6.QtMultimedia import QMediaDevices
 from PySide6.QtWidgets import (
@@ -1037,6 +1037,15 @@ class MainWindow(QMainWindow):
             if self._loader_running(thread):
                 thread.wait()
         self._platform_info_running.clear()
+        # The bounded pass above can leave slow image/account requests alive.
+        # QApplication destruction also deletes their owning widgets, so join
+        # every remaining owned QThread, including its native TLS cleanup.
+        owned_threads = self.findChildren(QThread)
+        for thread in owned_threads:
+            thread.requestInterruption()
+            thread.quit()
+        for thread in owned_threads:
+            thread.wait()
 
     def _clear_expanded_slots(self, layout_id: str) -> None:
         current = self.wall._capacity() or len(self.wall.tiles)
@@ -3691,8 +3700,13 @@ def main(argv: list[str] | None = None) -> int:
             QMessageBox.critical(None, "更新未执行", "无法启动更新助手，原程序已保留，请稍后重新下载更新。")
     elif window._restart_requested and not _launch_restart():
         QMessageBox.critical(None, "重启失败", "无法重新启动软件，请手动打开程序。设置已保存。")
-    # 关窗时可能还有网络线程在收尾，Qt / VLC 的析构顺序会偶发崩在退出瞬间，
-    # 配置在 closeEvent 里已经存好了，这里直接退出进程最稳。
+    # QApplication owns the GUI thread's font/image caches. Destroy it before
+    # direct process exit, otherwise Windows DLL teardown destroys their storage
+    # while the GUI thread still holds entries (QThreadStorage warnings).
+    from shiboken6 import delete as delete_qt
+    delete_qt(app)
+    # closeEvent already saved state and stopped workers/players. Keep the
+    # existing direct exit for process-global VLC/Python teardown ordering.
     try:
         sys.stdout.flush()
         sys.stderr.flush()

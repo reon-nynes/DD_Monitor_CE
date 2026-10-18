@@ -362,3 +362,68 @@ Final installable artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
 SHA256: `184bc737168ad3d313538761eb2ccc4d27e665cb7c3b6a0ec48d020e0a383649`.
 The artifact includes the final README and source files. Both branches are retained
 locally; no push, merge or release, and the pre-existing `.codegraph/` is untouched.
+
+## Follow-up: gift success, fan-club light signs, native following and exit
+
+The user clarified that dragging smoothness means moving the main window while
+its small pickers follow, rather than tile dragging. Plugin commit `db68825` fixes
+the following with observed failing-then-passing regressions:
+
+- `code=0, message="ok"` was misclassified as a failed gift send. Accept its
+  case variants as success, keep nonzero codes/contradictory errors rejected,
+  and refresh the wallet without success feedback. The controller regression
+  exercises the real response parser using a synthetic HTTP response.
+- The public roomGiftList response marks known ordinary fan-club light signs
+  (IDs 31164/34001) with special_type=3 and the default_gift/send_gift route.
+  The prior blanket special_type filter disabled them. Permit this exact known
+  exception while retaining permissions, room/payment and unknown-flow checks.
+  Current public room 6 was read without authentication; no real gift was sent.
+- A quantity popup repositioned on every Move/Resize throughout the application,
+  including unrelated windows. Restrict this to its gift picker, ignore unrelated
+  base-filter event types early, and avoid native handle queries on ordinary
+  events. The regression observes zero unrelated-window updates and at most one
+  quantity update per owner move. Native tests cover 24 consecutive owner moves
+  in each theme, accepting fractional-DPR physical-pixel rounding. These checks
+  establish behavior and reduced repeated work, not a measured drag frame rate.
+
+The host's production entry called os._exit while QApplication was still alive.
+A native minimal-label reproduction identified the QThreadStorage warning's
+thread address as the GUI thread; explicit QApplication disposal removes the
+warning before the retained direct process exit. Application disposal requires
+complete worker cleanup: a six-second owned request exceeded the existing
+2.5-second wait and reproduced a fatal QThread destruction; an event-loop worker
+also reproduced a shutdown hang until quit was requested. The final close path
+requests interruption/quit and joins all remaining owned QThreads, including
+native thread-local teardown, before disposing QApplication. The window remains
+hidden during this cleanup. `[关闭]` remains an ordinary timing log.
+
+| Final incremental check | Result |
+| --- | --- |
+| Send / composer / emoticons / lifecycle | 13 / 16 / 18 / 5 passed |
+| Gift API / controller / media / popup / picker UX | 17 / 9 / 4 / 10 / 15 passed |
+| Rebuilt actual ZIP installed into offline Windows MainWindow | 6 passed at effective DPR 1.5 and again at 2.25; both processes exit 0 |
+| Unique bili_live unit and installed integration checks | 113 passed |
+| Native Qt + real local VLC | Dark/light, 900/360/200 widths, continuous owner/gift/quantity following, native hit targets, GIFs, gap, focus/IME; effective DPR 1.5 and 2.25, exit 0 |
+| High-DPI picker UX | 15 passed, exit 0 |
+| Full host close-release selfcheck | Pass; real production exit subprocesses cover label, MainWindow/VLC, six-second request and event-loop worker; no QThreadStorage warning |
+| Host plugin control regressions | 9 passed; deliberate fault-isolation exceptions are expected test output |
+| Final packages | CRC/source byte consistency, install without execution, host loading and five platform registrations pass |
+| Syntax / whitespace | Two changed host and seven changed plugin Python sources compile in memory; both patches pass git diff --check |
+
+The reported QWindowsWindow::setGeometry warning is **not confirmed fixed**.
+Native probes of main-window resizing/restoring/maximizing and settings dialogs
+with actual settings, a real MainWindow owner, animated page switching and
+post-save value collection did not reproduce it. The user has an optional pending
+question about the exact triggering operation. Do not apply a guessed minimum-size
+or orientation workaround. Fixed-scale coverage does not establish cross-monitor
+DPI behavior. VLC teardown can still print existing MPEG4 get_buffer diagnostics.
+
+The previous independent reviews remain recorded above; these later diagnostics
+and fixes used author regressions and did not dispatch another review. Previously
+documented historical-website/match_sync limitations remain unchanged and are not
+claimed fixed or rerun here. No real danmaku/gifts, push, merge or release.
+
+Final replacement artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `0761b65b58f7ebcfe3aee28e35595fca29d7ce543132d58790e4b0c4f6cc6d24`.
+The user's installed, untracked `plugins_user/bili_live/` copy was preserved;
+the new source/ZIP needs to be installed and the host restarted to run these fixes.
