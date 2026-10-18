@@ -222,3 +222,14 @@ context.set_setting("token", "abc")     # 写，并通知本体落盘
   插件起的线程要在这里停掉，否则 Qt 退出时会崩。
 - **插件不是沙箱**：它拿到的是真实窗口对象和进程权限。这是刻意的取舍 ——
   录像、抓别的平台这类事本来就需要完整的网络和文件访问。
+# 格子内控件扩展
+
+插件可调用 `context.register_tile_control("controls", factory, priority=100)`。
+`factory(TileControlContext)` 返回 `ddm.plugins.TileControl`；其中 `parent` 是本体管理的
+容器，`room` 是房间副本，`invalidate_layout()` 请求重新分配底栏空间。
+`TileControl(widget, minimum_width=90, preferred_width=240)` 可覆盖
+`set_room(room)`、`interaction_active()` 和 `shutdown()`。每个格子（包括初始空格子）
+只构造一次；每次房间赋值均通知。插件自行隐藏不支持房间的 widget，本体独立隐藏宽度
+不足的容器。优先级高的先分配，优先级相同时保持注册顺序。
+不支持的房间无需重新注册，移除格子或卸载时 `shutdown()` 只调用一次。
+注册在 `on_load` 成功之后生效；不要修改格子私有布局或包裹本体方法。

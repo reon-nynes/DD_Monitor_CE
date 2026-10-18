@@ -5871,6 +5871,10 @@ class Tile(QFrame):
         # 开关属于当前房间；新主播默认关闭，换位则恢复该房间保存的开关。
         self.danmaku_button.setChecked(bool(self.room.get("video_danmaku_enabled", False)))
 
+        controls = getattr(self, '_plugin_controls', None)
+        if controls is not None:
+            controls.set_room(self.room)
+
         if empty:
             self._cover_source = None
             self.title_badge.set_text("", "")
@@ -5917,6 +5921,19 @@ class Tile(QFrame):
 
     def _layout_bottom_controls(self) -> None:
         width = self.width()
+        extensions = getattr(self, '_plugin_controls', None)
+        if extensions is not None and extensions.applicable():
+            self._layout_extended_bottom(extensions, width)
+            return
+        if extensions is not None:
+            extensions.allocate(0)
+        self.volume_button.setFixedWidth(40)
+        self.status_label.setVisible(True)
+        self.status_label.setMaximumWidth(16777215)
+        self.status_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
+        self.bottom.layout().setStretchFactor(self.status_label, 1)
+        self.danmaku_settings_button.setVisible(True)
+        self.recording_button.setVisible(getattr(self, '_recording_available', True))
         compact = width < 420
         layout = self.bottom.layout()
         margin, spacing = (6, 4) if compact else (10, 8)
@@ -5941,6 +5958,47 @@ class Tile(QFrame):
         remaining = width - fixed - margin * 2 - spacing * (len(visible) + 1) - 8
         self.volume_slider.setFixedWidth(max(18, min(86, remaining)))
         layout.activate()
+
+    def _layout_extended_bottom(self, extensions, width):
+        layout = self.bottom.layout()
+        compact = width < 480
+        margin, spacing = (10, 8) if width >= 600 else (4, 2)
+        if width < 420:
+            margin, spacing = (0 if width < 260 else 2), 0
+        layout.setContentsMargins(margin, 3, margin, 3)
+        layout.setSpacing(spacing)
+        self.pause_button.setFixedWidth(26 if compact else 34)
+        self.volume_button.setFixedWidth(26 if width < 260 else 40)
+        self.danmaku_button.setFixedWidth(26 if compact else 44)
+        self.danmaku_button.setText('弹' if compact else '弹幕')
+        self.volume_label.setVisible(width >= 760)
+        self.recording_time.setVisible(bool(self.recording_time.text()) and width >= 480
+                                       and getattr(self, '_recording_available', True))
+        self.danmaku_settings_button.setVisible(width >= 300)
+        self.recording_button.setVisible(width >= 240 and getattr(self, '_recording_available', True))
+        self.recording_button.setFixedWidth(26 if compact else 64)
+        self.status_label.setVisible(width >= 480)
+        self.status_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+        layout.setStretchFactor(self.status_label, 0)
+        self.status_label.setMaximumWidth(120 if width >= 700 else 70)
+        controls = [self.pause_button, self.volume_button, self.volume_label,
+                    self.danmaku_button, self.danmaku_settings_button, self.recording_button,
+                    self.recording_time, self.fullscreen_button]
+        visible = [w for w in controls if not w.isHidden()]
+        fixed = sum(w.sizeHint().width() if w is self.recording_time else w.width() for w in visible)
+        budget = width - fixed - margin * 2 - spacing * (len(visible) + 2)
+        minimum = extensions.applicable()[0].control.minimum_width
+        status = max(0, min(self.status_label.maximumWidth(), budget - minimum - 20)) if width >= 480 else 0
+        self.status_label.setMaximumWidth(status)
+        slider = min(86, max(18, budget - minimum - status - spacing)) if width >= 220 else 0
+        self.volume_slider.setVisible(bool(slider))
+        self.volume_slider.setFixedWidth(max(0, slider))
+        extensions.allocate(budget - slider - status - (spacing if slider else 0))
+        layout.activate()
+
+    def plugin_interaction_active(self) -> bool:
+        controls = getattr(self, '_plugin_controls', None)
+        return controls.interaction_active() if controls is not None else False
 
     def set_recording_state(self, state: str) -> None:
         self._recording_state = state
@@ -7111,6 +7169,9 @@ class WallGrid(QWidget):
         return tile
 
     def _drop_tile(self, tile: Tile) -> None:
+        controls = getattr(tile, '_plugin_controls', None)
+        if controls is not None:
+            controls.shutdown()
         border = self._pane_borders.pop(tile, None)
         if border is not None and (self._hover_border is border or
                                    self._border_drag is not None and self._border_drag["border"] is border):
