@@ -31,7 +31,7 @@
 
 ### 软件与插件说明、设计及版本资料
 
-共 21 项。
+共 23 项。
 
 - `README.md`
 - `docs/BUG-STATUS-2026-10-02.md`
@@ -55,6 +55,7 @@
 - `docs/repository-map.md`
 - `docs/room-presets-design.md`
 - `docs/skins.md`
+- `docs/superpowers/specs/2026-10-18-bilibili-live-gifts-design.md`
 
 ### 构建、调试与开发工具（开发维护用途）
 

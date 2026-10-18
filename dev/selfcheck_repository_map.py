@@ -29,14 +29,16 @@ class RepositoryMapTests(unittest.TestCase):
         self.assertEqual(len(listed), len(set(listed)), "Duplicate inventory path")
 
     def test_document_index_links_resolve(self):
-        for name in ("docs/README.md", "docs/repository-cleanup-review.md", "README.md",
-                     "docs/plugins.md"):
-            path = ROOT / name
+        documents = [ROOT / name for name in (
+            "docs/README.md", "docs/repository-cleanup-review.md", "README.md",
+            "docs/plugins.md")]
+        documents.extend(sorted((ROOT / "docs/superpowers/specs").glob("*.md")))
+        for path in documents:
             content = path.read_text(encoding="utf-8")
             for target in re.findall(r"\]\(([^)]+)\)", content):
                 if "://" in target or target.startswith("#"):
                     continue
-                with self.subTest(document=name, target=target):
+                with self.subTest(document=str(path.relative_to(ROOT)), target=target):
                     destination = path.parent / target.split("#", 1)[0]
                     if not destination.exists():
                         # Local notes are intentionally absent from clean clones.
