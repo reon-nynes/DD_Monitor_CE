@@ -5980,7 +5980,9 @@ class Tile(QFrame):
         self.status_label.setVisible(width >= 480)
         self.status_label.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         layout.setStretchFactor(self.status_label, 0)
-        self.status_label.setMaximumWidth(120 if width >= 700 else 70)
+        # Short statuses must not reserve an empty column before plugin input.
+        self.status_label.setMaximumWidth(min(self.status_label.sizeHint().width(),
+                                              120 if width >= 700 else 70))
         controls = [self.pause_button, self.volume_button, self.volume_label,
                     self.danmaku_button, self.danmaku_settings_button, self.recording_button,
                     self.recording_time, self.fullscreen_button]
@@ -6151,6 +6153,8 @@ class Tile(QFrame):
         """信息条里的状态文字：缓冲优先，其次才是当前状态。"""
         text = "缓冲中…" if getattr(self, "_buffering", False) else self._status_text
         self.status_label.setText(text or "")
+        if getattr(self, '_plugin_controls', None) is not None:
+            self._layout_bottom_controls()
 
     def set_paused(self, paused: bool) -> None:
         self.paused = bool(paused)

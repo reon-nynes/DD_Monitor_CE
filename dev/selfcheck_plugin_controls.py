@@ -141,6 +141,18 @@ class ControlsTests(unittest.TestCase):
             self.assertLess(tile.fullscreen_button.geometry().right(), width)
             self.assertLessEqual(control.parentWidget().geometry().right(), tile.fullscreen_button.x())
 
+    def test_short_status_does_not_reserve_empty_space_before_input(self):
+        self.register()
+        tile = self.tile({'room_id': '12'})
+        tile.resize(900, 400)
+        tile.set_status('已开播')
+        APP.processEvents()
+        label = tile.status_label
+        natural = label.fontMetrics().horizontalAdvance(label.text())
+        wrapper = tile._plugin_controls.entries[0].wrapper
+        self.assertLessEqual(label.width(), natural + 8)
+        self.assertLessEqual(wrapper.x() - label.x() - natural, 16)
+
 
 if __name__ == '__main__':
     unittest.main()
