@@ -7,6 +7,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from unittest.mock import patch
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QCursor
@@ -37,7 +38,11 @@ def main():
     app_module.StatusPoller = app_module.StatsPoller = SilentPoller
     app = QApplication(sys.argv)
     rooms = [{"room_id": "1000", "uname": "Cursor test", "live": False}]
-    window = MainWindow(rooms, [dict(room) for room in rooms], layout_id="1x1")
+    # Deferred start_all treats this synthetic offline room as stopped and
+    # releases the local fixture player. Keep startup network/playback isolated.
+    with patch('ddm.app.QTimer.singleShot'):
+        window = MainWindow(rooms, [dict(room) for room in rooms], layout_id="1x1",
+                            state={'plugins_enabled': [], 'settings': {'auto_update': False}})
     window._upgrade_fullscreen_quality = lambda _tile: False
     window.setWindowFlag(Qt.WindowStaysOnTopHint, True)
     window.isActiveWindow = lambda: True
@@ -100,6 +105,10 @@ def main():
                 assert info.hCursor, "Native cursor must be restored on movement"
             wait(app, lambda: cursor.hidden)
 
+            # Wake the bar and wait for its animated geometry before targeting
+            # a child. A hidden bar's child center is outside the video window.
+            QCursor.setPos(video_point.x() + 20, video_point.y())
+            wait(app, lambda: not cursor.hidden and tile._bar_progress == 0.0)
             QCursor.setPos(tile.volume_slider.mapToGlobal(tile.volume_slider.rect().center()))
             wait(app, lambda: not cursor.hidden)
             QTest.qWait(400)

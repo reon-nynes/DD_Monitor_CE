@@ -341,6 +341,9 @@ class MainWindow(QMainWindow):
         self.plugins.plugin_settings = self.state.setdefault("plugins", {})
         self.plugins._save_settings = lambda: config_module.save(self.current_state())
         plugin_api.set_manager(self.plugins)
+        self.plugins.register_credentials('bilibili', bili._cookies,
+            update=self._update_bilibili_credentials,
+            identity_keys=('SESSDATA', 'bili_jct'), writable_fields=('buvid3',))
         self.plugins.load()
         for tile in self.wall.tiles:
             self.plugins.attach_tile(tile)
@@ -3197,6 +3200,7 @@ class MainWindow(QMainWindow):
             bili.set_sessdata("")
             self.state["sessdata"] = ""
             self.state["bili_jct"] = ""
+            self.plugins.notify_credentials('bilibili')
             config_module.save(self.current_state())
             self.stop_danmaku()
             self.sync_danmaku()
@@ -3243,6 +3247,7 @@ class MainWindow(QMainWindow):
     def _on_login(self, sessdata: str) -> None:
         bili.set_sessdata(sessdata)
         self.state["sessdata"] = sessdata
+        self.plugins.notify_credentials('bilibili')
         config_module.save(self.current_state())
         self._render_account()
         self.refresh_account()
@@ -3250,6 +3255,11 @@ class MainWindow(QMainWindow):
         self.stop_danmaku()
         self.sync_danmaku()
         print(f"登录成功，已保存登录状态（{len(sessdata)} 字符）", file=sys.stderr, flush=True)
+
+    def _update_bilibili_credentials(self, changes: dict) -> None:
+        if 'buvid3' in changes:
+            self.state['buvid3'] = bili.remember_buvid3(changes['buvid3'])
+            config_module.save(self.current_state())
 
     def open_import_follows(self) -> None:
         follow_loader = getattr(self, "_follow_loader", None)

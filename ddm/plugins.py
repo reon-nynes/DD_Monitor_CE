@@ -43,6 +43,8 @@ from typing import Any, Callable
 from . import config as config_module
 from .file_ops import replace_directory
 from .plugin_controls import TileControl, TileControlContext, TileControls
+from .plugin_credentials import (CredentialSnapshot, CredentialStore,
+                                 EVENT_ACCOUNT_CHANGED, EVENT_CREDENTIALS_UPDATED)
 
 #: 插件目录要和 utils / cache / logs 一样落在**程序旁边**：源码运行时是仓库根，
 #: 打包成 exe 后是 exe 所在目录。这里用 config.REPO（它已经处理了 frozen），
@@ -95,6 +97,7 @@ ALL_EVENTS = (
     EVENT_TILE_PLAYING, EVENT_TILE_STOPPED, EVENT_TILE_ADDED, EVENT_TILE_REMOVED,
     EVENT_DANMAKU, EVENT_DANMAKU_STATUS, EVENT_ROOM_LIVE, EVENT_ROOM_OFFLINE,
     EVENT_SETTINGS,
+    EVENT_ACCOUNT_CHANGED, EVENT_CREDENTIALS_UPDATED,
 )
 
 
@@ -248,6 +251,12 @@ class PluginContext:
     def register_tile_control(self, control_id, factory, *, priority=0) -> None:
         self._manager.register_tile_control(self.name, control_id, factory, priority=priority)
 
+    def credentials(self, platform) -> CredentialSnapshot | None:
+        return self._manager.credentials(platform)
+
+    def update_credentials(self, platform, changes, *, expected_generation) -> bool:
+        return self._manager.update_credentials(platform, changes, expected_generation=expected_generation)
+
     # ---- 取用 ----
     @property
     def window(self):
@@ -330,6 +339,19 @@ class PluginManager:
         self._tile_providers = {}
         self._loading_owner = None
         self._provider_order = 0
+        self._credentials = CredentialStore(self.emit)
+
+    def register_credentials(self, platform, read, **options):
+        self._credentials.register(platform, read, **options)
+
+    def notify_credentials(self, platform):
+        self._credentials.notify(platform)
+
+    def credentials(self, platform):
+        return self._credentials.snapshot(platform)
+
+    def update_credentials(self, platform, changes, *, expected_generation):
+        return self._credentials.update(platform, changes, expected_generation=expected_generation)
 
     # ---- 装载 ----
     def load(self) -> None:

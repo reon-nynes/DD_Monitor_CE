@@ -16,6 +16,9 @@
 
 ## 已跟踪的其他文件：逐项标注
 
+- `dev/selfcheck_plugin_credentials.py`
+  - 验证平台中立的登录快照、设备条件更新与全屏交互保护。
+
 - `dev/selfcheck_plugin_controls.py`
   - 验证插件格子扩展的生命周期、隔离与宽度分配。
 

@@ -222,7 +222,8 @@ context.set_setting("token", "abc")     # 写，并通知本体落盘
   插件起的线程要在这里停掉，否则 Qt 退出时会崩。
 - **插件不是沙箱**：它拿到的是真实窗口对象和进程权限。这是刻意的取舍 ——
   录像、抓别的平台这类事本来就需要完整的网络和文件访问。
-# 格子内控件扩展
+
+## 格子内控件扩展
 
 插件可调用 `context.register_tile_control("controls", factory, priority=100)`。
 `factory(TileControlContext)` 返回 `ddm.plugins.TileControl`；其中 `parent` 是本体管理的
@@ -233,3 +234,21 @@ context.set_setting("token", "abc")     # 写，并通知本体落盘
 不足的容器。优先级高的先分配，优先级相同时保持注册顺序。
 不支持的房间无需重新注册，移除格子或卸载时 `shutdown()` 只调用一次。
 注册在 `on_load` 成功之后生效；不要修改格子私有布局或包裹本体方法。
+
+## 登录快照与交互状态
+
+`context.credentials(platform)` 返回 `CredentialSnapshot(platform, generation, values)`，
+未注册的平台返回 `None`。`values` 为独立只读映射，快照 repr 不输出密钥。
+`account.changed` 事件只包含 `platform`、`generation`；读取新快照获取当前凭据。
+本体目前为 `bilibili` 提供 `SESSDATA`、`bili_jct`、`buvid3`，继续使用本体登录入口。
+工作线程使用事先捕获的副本，不得在线程中访问这些 GUI 接口。
+
+发现设备标识后，可在 GUI 线程调用
+`context.update_credentials("bilibili", {"buvid3": value}, expected_generation=generation)`。
+旧账号代次返回 `False`；未知字段或不支持的更新抛出 `ValueError`。
+本体仅在设备 Cookie 为空时接收并持久化，保留后来登录取得的设备身份。
+此更新不推进账号代次；`account.credentials_updated` 仅包含平台、代次与字段名列表。
+禁止把凭据写入插件设置或日志。
+
+控件的 `interaction_active()` 可为编辑焦点、输入法组合、打开的弹窗返回 `True`，
+本体据此保持全屏控件可见（包括指针离开格子时）。隐藏或禁用的控件不参与查询。

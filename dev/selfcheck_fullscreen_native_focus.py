@@ -20,7 +20,11 @@ def main():
     owner.resize(800, 600)
     tile = Tile({'room_id': 'douyu:123', 'platform': 'douyu', 'uname': 'Fixture'}, owner)
     tile.resize(800, 600)
+    tile.setProperty('fullscreen', True)
+    tile._bar_animation.setDuration(0)
+    tile._layout_areas()
     owner._fullscreen_tile = tile
+    owner.settings = {'fullscreen_auto_hide_controls': True}
     owner.isActiveWindow = lambda: False
     owner.show()
     app.processEvents()
