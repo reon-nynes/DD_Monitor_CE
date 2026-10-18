@@ -1,6 +1,6 @@
 # Generic tile extensions and the bili_live plugin
 
-Date: 2026-10-18. Status: approved by the user on 2026-10-18. Product implementation has not started. See the [coordinated implementation plan](../plans/2026-10-18-bili-live-plugin.md).
+Date: 2026-10-18. Status: approved by the user on 2026-10-18. Implemented on the two requested branches, with one independent review and all five material findings fixed. Live authenticated sending and two unrelated repository validation failures remain explicitly unverified; see the completion evidence in the plan. See the [coordinated implementation plan](../plans/2026-10-18-bili-live-plugin.md).
 
 ## Intent and confirmed scope
 
@@ -103,7 +103,7 @@ Update the plugin repository README, packaging tests and any release/website cat
 
 ## Gifting behavior to implement
 
-This section preserves the prior approved gift design; the feature itself still needs implementation.
+This section preserves the prior approved gift design; the feature is implemented in the plugin; the plan records validation and remaining live-service limits.
 
 ### Entry, catalog and animated media
 
@@ -158,4 +158,4 @@ Author's decisions: retain built-in Bilibili playback/receiving; use one optiona
 
 The builder can settle exact module/class names, signal signatures, cache bounds, numeric layout budgets, loader scheduling and endpoint parameters from verified source, while meeting the behavior and tests above. Do not introduce a second login, move gift-specific state into the host, redesign the familiar UI or drop gift behavior to make extraction easier.
 
-After approval, write one coordinated implementation plan covering both repositories, then implement the host hooks, port sending/emoticons, implement gifts, and finish with packaged-host integration and an independent review. This document is not evidence that any of those features have been implemented.
+The coordinated plan has been implemented natively in this session, followed by one independent review across both branches. The plan records commits, regression/native evidence, review fixes and the precise remaining validation gaps; this design describes the required behavior rather than proving live-service compatibility.

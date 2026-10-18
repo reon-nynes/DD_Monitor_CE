@@ -177,7 +177,8 @@ B 站取流、在线人数或弹幕接口。当前跨平台悬停预览和弹幕
 
 ## 三、发弹幕
 
-弹幕接收与显示属于本体功能。发弹幕接口留给之后能完整实现认证和发送的插件：
+弹幕接收与显示属于本体功能。以下旧式发送器接口继续兼容；独立的 `bili_live` 插件通过
+本文后面的格子控件扩展和登录快照接口提供行内发送、表情及礼物界面：
 
 ```python
 class MySender(api.DanmakuSender):
@@ -252,3 +253,16 @@ context.set_setting("token", "abc")     # 写，并通知本体落盘
 
 控件的 `interaction_active()` 可为编辑焦点、输入法组合、打开的弹窗返回 `True`，
 本体据此保持全屏控件可见（包括指针离开格子时）。隐藏或禁用的控件不参与查询。
+
+
+## bili_live 配套安装
+
+`codex/plugin-tile-extensions` 提供上述接口；配套插件源码在
+[DD_Monitor_Plugins](https://github.com/Lanpropro/DD_Monitor_Plugins) 的本地
+`codex/bili-live` 分支。使用插件管理器安装 `dist/bili_live-1.0.zip`，按现有流程保存并重启。
+继续在本体账号界面登录 B 站，各数字房间格子自动显示输入、表情、礼物和发送控件。
+禁用/移除插件同样在重启后生效；登录持久化、播放和接收弹幕仍由本体负责。
+插件在装载前检查必要公开接口，旧版本本体会报告兼容性要求。
+
+该 ZIP 当前是本地产物，网站没有对应下载条目。完整实施、一次独立审查及验证限制见
+[实施记录](superpowers/plans/2026-10-18-bili-live-plugin.md#completion-evidence-2026-10-18)。
