@@ -10,7 +10,7 @@
 | 外观与皮肤 | [外观设计](appearance-design.md)、[皮肤说明](skins.md) |
 | 布局拖动试用 | [PR #6 / #7 说明与手动测试](pr6-pr7-layout-testing.md) |
 | 直播间组合预设 | [首版试用、设计与验收清单](room-presets-design.md) |
-| B 站直播送礼 | [送礼设计与验收契约（待批准）](superpowers/specs/2026-10-18-bilibili-live-gifts-design.md) |
+| B 站直播送礼 | [已批准的设计与验收契约](superpowers/specs/2026-10-18-bilibili-live-gifts-design.md)、[实施计划（待执行）](superpowers/plans/2026-10-18-bilibili-live-gifts.md) |
 | 更新机制 | [在线更新](online-updates.md) |
 | 版本记录 | [0.4](releases/RELEASE-v0.4.md)、[0.3.1](releases/RELEASE-v0.3.1.md)、[0.3](releases/RELEASE-v0.3.md)、[0.2](releases/RELEASE-v0.2.md)、[0.1](releases/RELEASE-v0.1.md) |
 | 第三方来源 | [NOTICE](NOTICE.md)、[许可证](../LICENSE) |

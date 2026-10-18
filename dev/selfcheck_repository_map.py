@@ -32,7 +32,7 @@ class RepositoryMapTests(unittest.TestCase):
         documents = [ROOT / name for name in (
             "docs/README.md", "docs/repository-cleanup-review.md", "README.md",
             "docs/plugins.md")]
-        documents.extend(sorted((ROOT / "docs/superpowers/specs").glob("*.md")))
+        documents.extend(sorted((ROOT / "docs/superpowers").rglob("*.md")))
         for path in documents:
             content = path.read_text(encoding="utf-8")
             for target in re.findall(r"\]\(([^)]+)\)", content):
