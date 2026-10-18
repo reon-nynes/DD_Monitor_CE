@@ -1,6 +1,6 @@
 # Generic tile extensions and the bili_live plugin
 
-Date: 2026-10-18. Status: proposed; awaiting approval of this cross-repository design. Product implementation has not started.
+Date: 2026-10-18. Status: approved by the user on 2026-10-18. Product implementation has not started. See the [coordinated implementation plan](../plans/2026-10-18-bili-live-plugin.md).
 
 ## Intent and confirmed scope
 

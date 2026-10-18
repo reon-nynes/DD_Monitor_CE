@@ -47,6 +47,14 @@ class RepositoryMapTests(unittest.TestCase):
                             capture_output=True)
                         self.assertEqual(ignored.returncode, 0, target)
 
+    def test_designs_and_plans_have_document_index_entries(self):
+        content = (ROOT / "docs/README.md").read_text(encoding="utf-8")
+        for section in ("specs", "plans"):
+            for path in (ROOT / "docs/superpowers" / section).rglob("*.md"):
+                target = path.relative_to(ROOT / "docs").as_posix()
+                with self.subTest(document=target):
+                    self.assertIn("](" + target + ")", content)
+
     def test_current_notes_source_and_portable_layouts(self):
         # Exercise the real UI method with label doubles; no QApplication,
         # plugin loading, network or real config is needed for file resolution.
