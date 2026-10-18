@@ -7,6 +7,7 @@
 | --- | --- |
 | 使用说明 | [项目 README](../README.md) |
 | 插件 | [插件说明](plugins.md) |
+| 插件扩展设计 | [通用格子接口与 bili_live 插件](superpowers/specs/2026-10-18-bili-live-plugin-design.md)（待批准） |
 | 外观与皮肤 | [外观设计](appearance-design.md)、[皮肤说明](skins.md) |
 | 布局拖动试用 | [PR #6 / #7 说明与手动测试](pr6-pr7-layout-testing.md) |
 | 直播间组合预设 | [首版试用、设计与验收清单](room-presets-design.md) |
