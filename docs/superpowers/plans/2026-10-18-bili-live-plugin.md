@@ -751,3 +751,63 @@ events during the drag, providing no evidence that descendant layout scheduling
 causes those earlier reports. Do not infer another layout or animation fix from
 that uncertainty. The previously recorded VLC MPEG4 teardown diagnostics and
 unreproduced geometry warning remain outside this change. Preserve `.codegraph/`.
+
+## 2026-10-19 Follow-up: bypass queued Qt geometry during native drags
+
+The user still observed a smooth main window with lagging and stuttering pickers,
+especially at drag start. The prior Qt Move assertions did not establish the
+native window position before delivery of queued Qt geometry events. Plugin
+commit `f6c4fd92ce7f0333d99c1d9ecf73b0ec187f3118` addresses that gap; host runtime
+code is unchanged.
+
+A direct native SetWindowPos probe moved the owner immediately while both the
+owner's Qt position and the picker remained unchanged until processEvents.
+Holding Qt delivery for 50ms left the picker behind for that entire interval.
+The old `db68825` implementation showed the same dependency, so this does not
+identify every historical difference in the user's perceived smoothness.
+The installed MainWindow regression was extended to native HWND movement with
+80 emoticons and 80 gifts. Running it with a temporary pristine `8e632e8` ZIP
+reproduced a 45-physical-pixel lag for both pickers; its existing Qt assertions
+still passed. The final ZIP passes both paths.
+
+The Windows-only native follower is installed only while a picker is visible.
+It observes the owner's WM_ENTERSIZEMOVE/WM_WINDOWPOSCHANGING/WM_EXITSIZEMOVE
+without consuming the messages. During a native move, submit the follower HWND
+position before the owner's pending position is applied, rather than waiting
+for a Qt Move or another queued timer/message. The quantity window follows the
+gift window's native changes in the same way. Ignore delayed Qt placements
+during native movement, then reconcile through normal anchor layout on exit.
+Clamp against native monitor work bounds, preserve above/below placement, and
+use the normal Qt path when the owner size changes. Hidden pickers remove the
+native filter; programmatic movement and descendant layout still use the prior
+Qt implementation. No process-wide input injection or real sends were used.
+
+Eight native HWND regressions pass at effective DPR 1.5 and 2.25: first and
+continuous steps without a Qt pump, hidden pickers, unrelated windows, reopen
+rebasing, edge return without drift, nested quantity edge following, top-edge
+release consistency and interactive resizing. They allow one physical pixel
+for fractional-DPI rounding. The first/continuous failure was observed before
+the implementation; edge and resize gaps were also observed failing and fixed.
+The complete 133 source checks pass in the standard offscreen scale environment.
+Eight installed integration checks, all 23 UX checks, and the real VLC/system
+modal drag checks pass on Windows at both scales, with process exit 0.
+This gives 149 unique unit/integration/native regression checks. Package CRC,
+source consistency, install without execution, five-platform loading, Python
+syntax and patch whitespace checks pass. The final README-only package rebuild
+retains the runtime bytes used by those Windows tests.
+
+An additional offscreen integration invocation exposed a baseline teardown
+crash: all eight assertions pass, then QApplication destruction exits with
+0xC0000005. A temporary pristine `8e632e8` plugin plus test tree reproduces it;
+explicit QApplication deletion also crashes. It is not counted as a successful
+offscreen integration process, and is not fixed by this native drag change.
+Existing VLC MPEG4 teardown diagnostics and unreproduced geometry-warning limits
+also remain. Native HWND timing is not physical mouse-to-display latency or FPS.
+
+Replacement artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `36a020b0be68d103f5662362b4cfef31a48a0cc938d3b1d0d990f68156abd5e1`.
+At investigation start, the untracked installed plugin matched `8e632e8`.
+This work did not modify it; it was absent at the final status check.
+Installed loading requires importing this ZIP and restarting. Direct
+loading from the cloned source directory requires a restart. Preserve
+`.codegraph/` as well. No push, merge, release or additional independent review.
