@@ -523,3 +523,43 @@ validation limitations remain as recorded above. No additional independent
 review, push, merge or release. Preserve `.codegraph/` and the user's installed
 untracked `plugins_user/bili_live/`; source loading needs a restart, installed
 loading needs the replacement ZIP and a restart.
+
+## Follow-up: retain retrieved emoticons during refresh and use inline spinners
+
+Plugin commit `28a246e56842b3bd0b381d86acc2885d1bb3c587` implements the user's
+explicit refresh behavior. Emoticon refresh preserves the retrieved package tabs,
+loaded icons, selection and scroll while awaiting the response. The same-context
+permission snapshot remains valid so existing emoticons can still be selected;
+failure retains them. An unchanged result reuses the existing grid. Room/account
+changes explicitly clear the old content and permissions; the existing request
+and image generation checks continue to reject stale responses.
+
+Both pickers share a 16-pixel vector spinner directly left of refresh. It has a
+reserved layout slot, animates only while loading and visible, pauses while the
+picker is hidden and resumes on reopen if the request is still pending. Refresh
+is disabled during reads. Gift loading no longer adds a separate text row;
+actual read errors retain their error messages. Preserve the hidden emoticon
+status label's layout stretch so the spinner cannot spread away from refresh.
+
+Three added regressions were observed failing before the implementation, then
+passing: retain 80 retrieved emoticons/icons and scroll across pending/error/same
+results; select during a blocked refresh but clear on room change; inspect the
+rendered spinner animation, adjacency, stopped hidden timer and resumed loading
+for both picker types. A tighter adjacency assertion reproduced a 91-pixel gap
+when the status label was hidden; retaining its layout stretch fixes that too.
+
+129 unique plugin unit/installed integration checks pass (13 send, 17 composer,
+19 emoticons, 5 lifecycle, 23 gift API, 9 controller, 4 media, 13 gift popup,
+19 picker UX, 7 installed integration). Native Windows integration and picker UX
+pass at effective DPR 1.5 and 2.25 after the final header layout change. The
+same-turn native VLC checks and emoticon suite also pass at both scales before
+that header-spacing adjustment. Python syntax, patch whitespace, ZIP CRC/source
+byte consistency and host package loading pass. Host runtime code is unchanged.
+
+Final replacement ZIP: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `0ab81e5bd1bfa2c111da766cf92b1d2179c4781c54874c23f655686584d9a22a`.
+No real gift/danmaku sends, extra independent review, push, merge or release.
+Preserve the installed untracked plugin and `.codegraph/`. Prior geometry-warning,
+VLC teardown diagnostics and unrelated full-repository validation limits remain
+as recorded. Direct source loading needs a restart; installed loading needs this
+ZIP and restart.
