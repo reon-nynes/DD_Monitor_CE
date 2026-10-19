@@ -833,6 +833,7 @@ class SettingsDialog(QDialog):
 
     def __init__(self, settings: dict, shortcuts: dict, parent=None, plugin_manager=None, *, preview=False):
         super().__init__(parent)
+        self.setObjectName('DDMSettingsDialog')
         self._preview_only = preview
         self.setWindowTitle("设置")
         self.restart_requested = False

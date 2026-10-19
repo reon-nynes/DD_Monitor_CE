@@ -427,3 +427,29 @@ Final replacement artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
 SHA256: `0761b65b58f7ebcfe3aee28e35595fca29d7ce543132d58790e4b0c4f6cc6d24`.
 The user's installed, untracked `plugins_user/bili_live/` copy was preserved;
 the new source/ZIP needs to be installed and the host restarted to run these fixes.
+
+## Follow-up: geometry warning without a known trigger
+
+The user answered that the triggering operation is unknown. The size warning
+remains unreproduced and is not claimed fixed. Add targeted evidence capture for
+its next occurrence: the Qt log handler records a bounded Python calling stack
+only for QWindowsWindow::setGeometry messages, without querying GUI objects from
+Qt's potentially non-GUI message-handler thread. Give MainWindow and SettingsDialog
+stable object names so their native warning identifies the originating window.
+No minimum-size, layout, warning suppression or plugin behavior changes.
+
+The extended selfcheck_qt_log first failed because no geometry calling path was
+recorded, then passed after the change. It exercises real qWarning delivery and
+native names of real MainWindow/SettingsDialog windows, checks the triggering
+Python function appears in the log, preserves existing fatal logging, and verifies
+ordinary warnings do not receive stacks. It passes offscreen and in Windows Qt
+at effective DPR 1.5 and 2.25. selfcheck_general_settings passes, changed Python
+sources compile, and git diff --check passes.
+
+Expanded validation found an existing selfcheck_settings_status failure at its
+shared-room identity assertion (line 227). Re-executing the committed HEAD app
+and dialogs reproduced the same failure. A temporary explicit shared-data fixture
+allowed the script to progress to a second stale assertion about the global
+settings key set; that experimental fixture change was removed. The status test
+was not weakened or counted as passing, and these unrelated baseline issues are
+outside this diagnostic change. No new independent review was dispatched.

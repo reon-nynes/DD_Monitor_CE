@@ -8,6 +8,7 @@ from copy import deepcopy
 import os
 import sys
 import time
+import traceback
 import webbrowser
 from urllib.parse import urlsplit
 
@@ -96,6 +97,11 @@ def setup_file_log() -> str:
     # pythonw 没有原生 stderr；Qt 的致命错误必须在终止进程前写进日志。
     def qt_message(kind, context, message):
         print(f"[Qt {kind.name}] {message}", file=sys.stderr, flush=True)
+        if message.startswith('QWindowsWindow::setGeometry:'):
+            # Capture the caller while Qt is reporting it. Do not inspect GUI
+            # objects here: Qt can invoke this handler from another thread.
+            print('[窗口几何诊断] Python 调用栈：', file=handle, flush=True)
+            traceback.print_stack(limit=16, file=handle)
         if kind == QtMsgType.QtFatalMsg:
             faulthandler.dump_traceback(file=handle, all_threads=True)
 
@@ -112,6 +118,7 @@ class MainWindow(QMainWindow):
     def __init__(self, rooms: list[dict], wall_rooms: list[dict] | None = None,
                  layout_id: str = "", state: dict | None = None):
         super().__init__()
+        self.setObjectName('DDMMainWindow')
         self.setWindowTitle(version_module.DISPLAY_NAME)
         self.setFocusPolicy(Qt.StrongFocus)     # 让窗口能接收快捷键
         self.rooms = rooms
