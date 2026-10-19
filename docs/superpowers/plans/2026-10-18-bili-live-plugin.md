@@ -683,3 +683,71 @@ restart; installed loading needs this new ZIP and restart. Earlier unreproduced
 geometry warning, VLC MPEG4 teardown diagnostics and unrelated repository-wide
 validation limitations remain as recorded. This does not establish behavior for
 every physical drag trajectory or cross-screen scaling transition.
+
+## 2026-10-19 Follow-up: restore synchronous owner movement
+
+Plugin commit `8e632e8f040636099181967c3a91c4eb5a9ad138` on `codex/bili-live`
+corrects a regression in the previous `3eea764` optimization. This section
+supersedes that section's conclusion that coalescing owner moves improves live
+following. The burst benchmark measured throughput; its tests allowed the popup
+to remain at the previous position during each owner Move dispatch. Eventual
+geometry and frequent native updates did not establish synchronous following.
+
+Historical comparison used the same real MainWindow and inspected each Move
+event before a queued placement could run. Both panels gave these results:
+
+| Plugin revision | Owner Move events with a trailing picker, per panel |
+| --- | --- |
+| `db68825` | 0 / 40 |
+| `7304850` | 0 / 40 |
+| `28a246e` | 0 / 40 |
+| `ef39743` | 0 / 40 |
+| `3eea764` | 40 / 40, one two-pixel owner step behind |
+| Fixed worktree | 0 / 40 |
+
+Restore the historical synchronous owner Move path and remove the Windows
+private posted message/nativeEvent override. The shared popup implementation
+matches `ef39743` except for an explanatory comment. Descendant layout changes
+still coalesce to the settled anchor position, preserving the tile-sweep jump
+fix. Gift quantity windows still follow their gift picker. No host runtime code
+changes are needed; retained balances, refresh content/spinners and quantity
+travel protection remain in place.
+
+Replace the prior tests that incorrectly required owner moves to wait for the
+queue. The new tests inspect all three followers after each owner move without
+pumping events, and verify that an immediate owner move cancels a pending
+descendant placement without a later jump. The installed-ZIP regression uses
+the real MainWindow with 80 emoticons and 80 gifts, loads local image fixtures
+without network access, and inspects each owner event. This populated test was
+also run against a temporary `3eea764` ZIP: both panel subtests failed with the
+expected two-pixel lag, then passed against the final rebuilt ZIP at both scales.
+The actual Windows modal move-loop/VLC test now checks the position during each
+owner event, in addition to counting native updates and checking final geometry.
+
+Validation completed before the plugin commit:
+
+- 133 source checks pass: send 13, composer 17, emoticons 19, lifecycle 5,
+  gift API 23, controller 15, media 4, gift popup 14 and picker UX 23.
+- Eight actual ZIP installation/MainWindow checks pass at effective DPR 1.5
+  and 2.25, for 141 unique unit/integration checks in total. All 23 picker UX
+  checks also pass on Windows at both scales.
+- Native VLC checks pass at both scales, including same-dispatch following in
+  the system modal move loop for emoticon, gift and quantity windows, plus the
+  existing dark/light, width, hit-target, GIF, travel and focus/IME checks.
+- The final package passes CRC, source-byte consistency, installation without
+  execution and five-platform loading checks. Changed Python files compile in
+  memory, and `git diff --check` passes.
+
+Final replacement artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `03ce422c0e539f1f2b1a25787be2fbfe824e58fe3196cdb7a8f165e17f1e00ef`.
+Source loading requires a restart; installed loading requires replacement with
+this ZIP and a restart. No real gifts or danmaku were sent, and no additional
+independent review, push, merge or release was performed.
+
+These measurements establish that the queued-follow regression is removed.
+They do not establish physical mouse-to-display latency or reproduce all the
+user's earlier stutter. A separate native MainWindow probe saw only owner Move
+events during the drag, providing no evidence that descendant layout scheduling
+causes those earlier reports. Do not infer another layout or animation fix from
+that uncertainty. The previously recorded VLC MPEG4 teardown diagnostics and
+unreproduced geometry warning remain outside this change. Preserve `.codegraph/`.
