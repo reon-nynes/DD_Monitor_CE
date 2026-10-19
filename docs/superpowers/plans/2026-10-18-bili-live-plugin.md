@@ -453,3 +453,73 @@ allowed the script to progress to a second stale assertion about the global
 settings key set; that experimental fixture change was removed. The status test
 was not weakened or counted as passing, and these unrelated baseline issues are
 outside this diagnostic change. No new independent review was dispatched.
+
+## Follow-up: gift list scroll, guard payment flows and transient picker positions
+
+Plugin commit `7304850d9ca1e5953c8d64eb3e7c5e736e441873` on
+`codex/bili-live` addresses the user's next three reports. Host runtime code did
+not require changes; this host branch records the paired delivery only.
+
+Disabling a focused gift card walks Qt's focus chain through later cards and
+makes QScrollArea reveal each card, scrolling from 0 to 1227 in the failing
+offscreen reproduction (1231 in native Windows). Native testing also established
+that QApplication's active focus can belong to the host while the tool window
+remembers a gift card. Use the gift window's remembered focus and move it to the
+scroll container before disabling cards. Preserve the selected grid when only
+the wallet or a different tab's contents change. The regression uses 80 cards,
+actual clicking/focus and the send/refresh states without issuing a real send.
+
+The user confirmed the captain gift tooltip was "暂不支持此购买流程" in all
+rooms they tried. This was a plugin limitation: the initial implementation only
+supported sendGold/sendBag and rejected all interactive_pay routes. Public,
+unauthenticated roomGiftList reads for 21452505 and 22637261 confirmed captain,
+admiral and governor gifts use guard_gift/interactive_pay; guard attire uses
+guard_attire/interactive_pay (special_type=15). The cached official frontend
+app.3f7250563d6495ab0c32.js modules 17202/99591 establish the
+`/xlive/revenue/v2/interactive_pay/send` fields and three guard agreement URLs.
+Implement these two direct routes with the original gift_scene JSON, receiver,
+anchor, room, quantity, price, CSRF and getIpInfo address. Guard opening gifts
+confirm amount/agreements before submission; cancel on state/context changes
+during the dialog. No retry, alternate endpoint or paid fallback is attempted.
+Retain server permissions and quantity/stock restrictions. Descriptive rules on
+ordinary paid gifts no longer count as unknown bag-use restrictions. Unsupported
+scenes such as guard_blind_box stay visible with their specific disabled reason.
+
+Each ancestor Move/Resize during a bottom-row layout previously moved the native
+picker immediately, exposing intermediate anchor positions. An actual Move-event
+observer reproduced two positions from one layout transaction for both picker
+types. Coalesce descendant layout positioning through an owned zero-delay timer;
+owner-window Move still places synchronously for dragging. Hide/shutdown cancels
+pending placement. The integration suite also sweeps the native pointer between
+four real MainWindow tiles and the open gift/emoticon pickers. This establishes
+the identified cause and covered paths, not every intermittent physical pointer
+trajectory or a measured frame-rate improvement.
+
+| Final follow-up validation | Result |
+| --- | --- |
+| Send / composer / emoticons / lifecycle | 13 / 16 / 18 / 5 passed |
+| Gift API / controller / media / popup / picker UX | 23 / 9 / 4 / 13 / 18 passed |
+| Actual rebuilt ZIP installed into offline Windows MainWindow | 7 passed at effective DPR 1.5 and 2.25 |
+| Unique bili_live unit and installation checks | 126 passed |
+| Native Qt + actual local VLC | Dark/light, 900/360/200 widths, continuous owner/picker following, hit targets, GIFs, gap, focus/IME; both DPR settings exit 0 |
+| Native gift popup / picker UX | 13 / 18 passed at each DPR; includes real agreement dialog clicks, focused-card scroll and cancelled placement on teardown |
+| Final packages | CRC, source-byte consistency, install without execution, host loading and five platform registrations pass |
+| Syntax / whitespace | All changed plugin Python files compile in memory; git diff --check passes |
+
+The expanded timer regression also corrected test cleanup: shutdown already
+schedules picker deletion, so tearDown must not call deleteLater again after
+processing events. The installed restart fixture no longer unloads the old
+closed owner after replacing its temporary module namespace. The unrelated
+window in the movement test is placed away from the picker so it cannot trigger
+the independent mouse-leave policy merely by covering it.
+
+Final artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `33c09e367fd8406d113ea9da7b5eec4ffe8de8d5ccb6aa01b818bebb2423f446`.
+No real gifts/danmaku were sent. The new payment forms follow public/official
+evidence and synthetic request tests; authenticated online charging remains
+unverified. The prior setGeometry warning is still not claimed fixed; native VLC
+can still print MPEG4 teardown diagnostics. Earlier unrelated repository-wide
+validation limitations remain as recorded above. No additional independent
+review, push, merge or release. Preserve `.codegraph/` and the user's installed
+untracked `plugins_user/bili_live/`; source loading needs a restart, installed
+loading needs the replacement ZIP and a restart.
