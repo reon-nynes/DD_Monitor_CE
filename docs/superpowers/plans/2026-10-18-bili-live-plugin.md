@@ -563,3 +563,65 @@ Preserve the installed untracked plugin and `.codegraph/`. Prior geometry-warnin
 VLC teardown diagnostics and unrelated full-repository validation limits remain
 as recorded. Direct source loading needs a restart; installed loading needs this
 ZIP and restart.
+
+## Follow-up: retain battery balance and protect quantity-popup travel
+
+Plugin commit `ef39743b7ef21bcfabcad7e7e911c7b507df6a08` implements the latest
+balance and quantity-popup feedback on `codex/bili-live`. Host runtime code is
+unchanged; `codex/plugin-tile-extensions` records delivery here.
+
+The old send invalidation explicitly replaced the displayed wallet with None.
+The account-wide coordinator now retains the submitted cost and broadcasts a
+debit only after confirmed success. Controllers retain the displayed balance,
+subtract price times quantity for paid gifts, then replace it with an independent
+authoritative wallet response. Bag gifts do not debit batteries; rejected sends
+do not debit either. All same-account tiles apply the change, including when the
+originating tile has been destroyed. Consecutive successes accumulate and
+revision/read identity checks reject older pre-send or prior-send responses.
+
+Display retention is separate from permission to purchase and read freshness.
+An uncertain outcome retains the number without assuming a debit, but disables
+paid sends until a fresh wallet response arrives. A hidden invalidated panel
+fetches the wallet when reopened even though its displayed number is retained.
+Manual refresh also retains the number. A failed reconciliation retains the
+estimate and reports the read error without reclassifying a confirmed gift as
+failed. Success adds no success text; existing inline refresh indicators remain.
+
+The quantity popup sits six pixels from its card while grid rows are only three
+pixels apart. The travel gap therefore overlaps the preceding gift row, whose
+Enter handler and pointer polling both used to dismiss the popup. Both now use
+the same narrow bridge between the card and popup. It covers above/below
+placement while preserving immediate dismissal on another gift outside that
+bridge, second-click one-gift sending and existing owner-window following.
+
+Regression evidence: six controller assertions reproduced the old cleared
+balance; a second-row pointer traversal reproduced premature closure at the
+overlapping row. The fixes pass these reproductions. Added/extended checks
+cover blocked authoritative reads, exact quantity cost, two rooms on one account,
+destroyed sender, accumulated sends, old refresh rejection, bag gifts, rejected
+and uncertain sends, retained-display purchase blocking, reopening stale state,
+both popup directions, neighbor dismissal and one emitted quantity submission.
+The installed ZIP integration also checks the actual label first shows the
+deducted amount and then the authoritative amount, with no success text.
+
+| Current validation | Result |
+| --- | --- |
+| Send / composer / emoticons / lifecycle | 13 / 17 / 19 / 5 passed |
+| Gift API / controller / media / popup / picker UX | 23 / 15 / 4 / 14 / 21 passed |
+| Unique unit and actual ZIP installation checks | 138 passed, including 7 installed integration checks |
+| Windows Qt integration / gift popup / picker UX | 7 / 14 / 21 passed at effective DPR 1.5 and 2.25 |
+| Native Qt + actual local VLC | Dark/light, 900/360/200 widths, owner following, hit targets, GIFs, gap, focus/IME; both scales exit 0 |
+| Final package integrity | ZIP CRC, source-byte consistency, install without execution and host loading pass |
+| Syntax / whitespace | Six changed Python files compile in memory; git diff --check passes |
+| Host repository documentation checks | File checks 3 and repository-map checks 5 passed |
+
+The final ZIP was rebuilt after the README validation record; native runs used
+the same runtime bytes before that documentation-only packaging change.
+Replacement artifact: `D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `ad8d81e6a735aaa97db2ee718ae1af5b3ddc0d878dd4052351e386d613eb588f`.
+No real gifts/danmaku were sent. Native VLC still printed the previously recorded
+MPEG4 teardown diagnostics; earlier geometry-warning and unrelated full-repo
+validation limitations remain. No additional independent review, push, merge or
+release. Preserve `.codegraph/` and the installed untracked
+`plugins_user/bili_live/`. Source loading needs restart; installed loading needs
+the replacement ZIP and restart.
