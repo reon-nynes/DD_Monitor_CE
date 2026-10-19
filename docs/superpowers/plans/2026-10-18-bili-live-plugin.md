@@ -625,3 +625,61 @@ validation limitations remain. No additional independent review, push, merge or
 release. Preserve `.codegraph/` and the installed untracked
 `plugins_user/bili_live/`. Source loading needs restart; installed loading needs
 the replacement ZIP and restart.
+
+## Follow-up: popup following under rapid native owner movement
+
+Plugin commit `3eea764da5e68c283ddb3ccb0678693a89ccd6c5` on `codex/bili-live`
+addresses the user's renewed report of slow popup following. Host runtime code
+is unchanged. The prior test moved the owner one step and processed events each
+time, proving final geometry but not measuring high-rate drag behavior.
+
+Initial profiling found one native move per picker per owner sample, with the
+quantity window following the gift picker serially. A failing regression
+delivered 40 owner positions without an intervening event-loop turn: both
+pickers exposed all 40 obsolete intermediate positions. Coalesce owner moves
+through the existing owned placement scheduler, just like descendant layout
+changes. The quantity picker continues following the gift picker's final move.
+
+A timer-only candidate passed geometry checks, but an actual Windows modal
+move-loop probe observed a roughly 32ms tail for a follower update. A second
+failing regression dispatches only the popup's queued Windows application
+messages, without pumping Qt timers; the timer-only implementation could not
+follow. The final implementation posts a private message to the popup's own HWND
+and handles it in QWidget.nativeEvent. This coalesces positions while allowing
+the Windows modal loop to dispatch the update promptly. The existing zero timer
+is the portable/failed-post fallback and cancellation flag. No application-wide
+native event filter or per-frame native positioning workaround is introduced.
+Hide/shutdown still cancel placement; old queued messages cannot reopen pickers.
+
+Validation: 140 unique bili_live unit/installed integration checks pass (send 13,
+composer 17, emoticons 19, lifecycle 5, gift API 23, controller 15, media 4,
+gift popup 14, picker UX 23, installed integration 7). Offscreen skips the one
+Windows-specific dispatch test; all 23 UX and seven installed integration checks
+pass on Windows at effective DPR 1.5 and 2.25. Native VLC checks also pass at
+both scales, including a newly added real Windows modal move loop for the gift,
+quantity and emoticon pickers, plus previous dark/light, 900/360/200 widths,
+following, hit targets, GIF, gap and focus/IME coverage.
+
+In the final native runs, 40 owner moves produced 39-40 follower updates during
+the modal loop. Relative to the most recent owner WM_MOVE, p95 was 1.26/1.48/2.27ms
+for emoticon/gift/quantity at DPR 1.5 and 1.38/1.41/2.23ms at DPR 2.25; observed
+maxima were 1.53/1.55/2.46ms and 1.56/1.47/2.44ms. These are synthetic message
+timings, not physical mouse-to-display latency or FPS. A same-machine burst
+comparison (600 owner moves, 40 per batch) produced 1200 follower Move events
+with serial following versus 28 with coalescing; median batch elapsed time was
+84.32ms versus 32.85ms, with respective observed maximum batch times of 102.00ms
+and 49.07ms. The live modal loop and burst benchmark cover different workloads.
+
+Changed Python sources compile, git diff --check passes, and final package CRC,
+source-byte consistency, install without execution and five-platform loading
+checks pass. Documentation-only README changes were packaged after native runs;
+runtime bytes are the same. Final replacement artifact:
+`D:\Dev\DD_Monitor_Plugins\dist\bili_live-1.0.zip`.
+SHA256: `aae1786a4870f40f55b4de69e64419071a89617186061c5c044d7769e64df52c`.
+
+No real gifts/danmaku, extra independent review, push, merge or release. Preserve
+the user's installed untracked plugin and `.codegraph/`. Source loading needs a
+restart; installed loading needs this new ZIP and restart. Earlier unreproduced
+geometry warning, VLC MPEG4 teardown diagnostics and unrelated repository-wide
+validation limitations remain as recorded. This does not establish behavior for
+every physical drag trajectory or cross-screen scaling transition.
