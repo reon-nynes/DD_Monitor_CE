@@ -1,6 +1,6 @@
 # Refresh the optional Bilibili plugin on current main
 
-Date: 2026-10-19. Status: draft for user approval.
+Date: 2026-10-19. Status: approved by the user on 2026-10-19; builder check found nothing important left. See the [implementation plan](../plans/2026-10-19-bili-plugin-main-refresh.md).
 
 ## Intent and confirmed boundaries
 

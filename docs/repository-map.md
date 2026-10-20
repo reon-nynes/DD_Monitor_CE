@@ -62,6 +62,7 @@
 - `docs/room-presets-design.md`
 - `docs/skins.md`
 - `docs/superpowers/plans/2026-10-18-bili-live-plugin.md`
+- `docs/superpowers/plans/2026-10-19-bili-plugin-main-refresh.md`
 - `docs/superpowers/specs/2026-10-18-bili-live-plugin-design.md`
 - `docs/superpowers/specs/2026-10-19-bili-plugin-main-refresh-design.md`
 
