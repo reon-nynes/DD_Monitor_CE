@@ -53,7 +53,9 @@ class RepositoryMapTests(unittest.TestCase):
             for path in (ROOT / "docs/superpowers" / section).rglob("*.md"):
                 target = path.relative_to(ROOT / "docs").as_posix()
                 with self.subTest(document=target):
-                    self.assertIn("](" + target + ")", content)
+                    self.assertEqual(
+                        content.count("](" + target + ")"), 1,
+                        "Each design or plan must appear exactly once in the document index")
 
     def test_current_notes_source_and_portable_layouts(self):
         # Exercise the real UI method with label doubles; no QApplication,
