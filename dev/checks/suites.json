@@ -68,6 +68,7 @@
     "mode": "live",
     "description": "公开真实直播，只读接收；需指定开播房间，不读取真实登录配置",
     "scripts": [
+      "check_bili_catchup_live",
       "check_live_restore",
       "check_live_danmaku_motion"
     ]

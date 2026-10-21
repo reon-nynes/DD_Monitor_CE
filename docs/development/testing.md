@@ -48,13 +48,17 @@ PR 测试和整理过程的历史记录位于 [archive/](../archive/README.md)�
 ```powershell
 python dev/run_checks.py --script selfcheck_bili_catchup
 python dev/run_checks.py --script selfcheck_bili_catchup_native --timeout 60
+python dev/run_checks.py --script check_bili_catchup_live -- 1900545280
 ```
 
 第一项使用播放器属性替身及真实 Qt 定时器，覆盖缓冲阶梯、异常读数、暂停/恢复、
 缓冲/跳转/结束状态、跨通道换流、预览和释放后的回调；不打开媒体、不读取账号。
-第二项需要 FFmpeg 与 libmpv，通过本机 HTTP 服务按真实时间发送合成的带音频 FLV，
-先提供约 4 秒积压，验证播放实际加速、缓冲消化至目标后恢复 1 倍速；
-使用非零起始时间戳，且测试结束前持续供流，无真实直播请求或音频输出。
+第二项需要 FFmpeg 与 libmpv，通过本机 HTTP 服务先返回仅音频 FLV，再提供备用的合成视频流，
+验证取流拒绝纯音频响应；使用真实 D3D11 窗口、视频解码参数和截图检查实际画面，
+再验证约 4 秒积压被消化至目标后恢复 1 倍速。
+使用非零起始时间戳，且测试结束前持续供流，无真实直播请求，播放保持静音。
+第三项仅在显式指定公开开播房间时运行，验证真实解码帧前进及窗口截图；
+不读取真实账号或发送弹幕，截图与读数保存在忽略目录 `work/bili-catchup-live-<房间号>.*`。
 
 追帧仅对 B 站 `app`/`web` 及其 HLS 编码通道的 HTTP(S) 主播放器自动启用，
 每 300 毫秒检查一次 `demuxer-cache-state.cache-end - time-pos`。
@@ -63,6 +67,9 @@ python dev/run_checks.py --script selfcheck_bili_catchup_native --timeout 60
 低缓冲时使用正常速度，由 libmpv 的缓冲机制处理；不采用原脚本最低 0.1 倍的自动减速。
 预览、其他平台和本地文件不启用；这版没有新增设置项或强制跳帧。
 本功能位于核心播放器，既有插件控件、账号与弹幕交互接口保持原有职责。
+FLV 探测会读取完整文件头并拒绝不含视频的响应；App/Web FLV 均不可用时尝试同编码的
+原生 HLS 通道，保留接口返回的画质与请求头。有声音、黑色占位窗口已创建但没有
+`video-params` 时，不上报视频播放成功或启用追帧，超时沿用现有错误重连流程。
 
 这些读数是本机已接收的前向缓冲估计，属性语义见 [mpv 手册](https://mpv.io/manual/stable/)；
 1.5 秒是目标缓冲长度，不代表主播到观众的端到端延迟。

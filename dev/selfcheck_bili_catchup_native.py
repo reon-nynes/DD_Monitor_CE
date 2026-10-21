@@ -14,11 +14,12 @@ REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 os.environ.setdefault("DDM_NO_SAVE", "1")
 
-from PySide6.QtCore import QEventLoop, QTimer
-from PySide6.QtWidgets import QApplication, QWidget
+from PySide6.QtCore import QEventLoop, Qt, QTimer
+from PySide6.QtGui import QImage
+from PySide6.QtWidgets import QApplication, QFrame, QVBoxLayout, QWidget
 
-from ddm.player import EMBEDDED_OPTIONS, TilePlayer
-import mpv
+from ddm import bili
+from ddm.player import TilePlayer
 
 
 def pump(seconds):
@@ -53,13 +54,19 @@ def main():
 
     class Stream(BaseHTTPRequestHandler):
         def do_GET(self):
+            audio_only = self.path == '/audio.flv'
             self.send_response(200)
             self.send_header("Content-Type", "video/x-flv")
             self.end_headers()
-            self.wfile.write(data[:13])
+            header = bytearray(data[:13])
+            if audio_only:
+                header[4] = 4
+            self.wfile.write(header)
             started = time.monotonic()
             try:
                 for timestamp, tag in tags:
+                    if audio_only and tag[0] != 8:
+                        continue
                     # 先给 4 秒积压，随后按真实时间提供数据；连接保持到测试结束。
                     if closing.wait(max(0, timestamp - 3600 - 4 - (time.monotonic() - started))):
                         return
@@ -77,14 +84,25 @@ def main():
     worker.start()
     app = QApplication.instance() or QApplication([])
     widget = QWidget()
-    player = TilePlayer(widget)
+    surface = QFrame(widget)
+    surface.setAttribute(Qt.WA_NativeWindow)
+    QVBoxLayout(widget).addWidget(surface)
+    widget.resize(640, 400)
+    widget.show()
+    player = TilePlayer(surface)
+    player.set_muted(True)
     try:
-        # 真正的解复用、时间戳和 speed 属性；无原生窗口、无音频输出。
-        player.player = mpv.MPV(vo="null", ao="null", cache=True,
-                                demuxer_max_bytes="16MiB", demuxer_max_back_bytes=0,
-                                **EMBEDDED_OPTIONS)
-        with patch.object(player, "bind"):
-            player.play(f"http://127.0.0.1:{server.server_port}/live.flv", "app")
+        base = f"http://127.0.0.1:{server.server_port}"
+        # 拒绝真实仅音频 FLV，保留备用视频通道的请求头；不调用真实 API。
+        with patch.object(bili, '_app_play_urls',
+                          new=lambda room, qn, codec: ([base + '/audio.flv'], 250)), \
+                patch.object(bili, '_web_play_urls',
+                             new=lambda room, qn, codec: ([base + '/live.flv'], 250)), \
+                patch.object(bili, '_app_hls_play_urls',
+                             new=lambda room, qn, codec: ([], 0)):
+            url, quality, profile, headers = bili.play_url('1001', 250)
+        assert url == base + '/live.flv' and profile == 'web'
+        player.play(url, profile, headers)
         deadline = time.monotonic() + 30
         accelerated = False
         initial_buffer = None
@@ -104,8 +122,19 @@ def main():
             elif (accelerated and 0 < buffered <= 1.5 and player.state == "playing"
                   and not player._prop("paused-for-cache", False)):
                 assert position > 3, "播放时间必须实际前进"
+                params = player._prop('video-params', {})
+                assert (params.get('w'), params.get('h')) == (160, 90), "必须有真实解码视频"
+                assert player._prop('estimated-frame-number', 0) > 50
+                raw = player.player.command('screenshot-raw', 'window')
+                assert raw['format'] == 'bgr0'
+                image = QImage(raw['data'], raw['w'], raw['h'], raw['stride'],
+                               QImage.Format_RGB32).copy()
+                colors = {image.pixel(x, y) for y in range(0, image.height(), 10)
+                          for x in range(0, image.width(), 10)}
+                assert len(colors) > 10, "D3D11 窗口必须实际显示合成画面，不能只有声音/占位背景"
                 print(f"libmpv catchup: PASS, buffer {initial_buffer:.2f}s -> "
-                      f"{buffered:.2f}s, speed={speed}, pts={position:.2f}", flush=True)
+                      f"{buffered:.2f}s, speed={speed}, pts={position:.2f}, "
+                      f"video={params['w']}x{params['h']}, colors={len(colors)}", flush=True)
                 player.stop()
                 assert player._prop("speed") == 1
                 return
