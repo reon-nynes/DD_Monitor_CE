@@ -1,6 +1,6 @@
 """B 站直播接口：房间信息与播放地址。
 
-取流优先走 app-room，失败时退回 web 端 playUrl，并尝试同通道备用 CDN。
+取流优先走 app-room，失败时退回 web 端 playUrl，并尝试同通道备用 CDN 与原生 HLS。
 保留接口提供的 HTTP/HTTPS 地址，探测与播放使用相同请求头。
 """
 import hashlib
@@ -304,12 +304,21 @@ def danmaku_conf(room_id: str, *, cookies: dict | None = None, user_agent: str =
 
 
 def _fetchable(url: str, headers: dict) -> bool:
-    """用播放器实际会发送的请求头确认 CDN 地址能拉流。"""
+    """用播放器的请求头探测地址；FLV 必须声明包含视频。"""
     try:
         response = requests.get(url, headers=headers, stream=True, timeout=8)
         try:
-            chunk = next(response.iter_content(16), b"")
-            return response.status_code == 200 and bool(chunk)
+            if response.status_code != 200:
+                return False
+            prefix = bytearray()
+            for chunk in response.iter_content(16):
+                prefix.extend(chunk)
+                if len(prefix) >= 9:
+                    break
+            if prefix.startswith(b"FLV"):
+                return (len(prefix) >= 9 and prefix[3] == 1 and bool(prefix[4] & 1)
+                        and int.from_bytes(prefix[5:9], "big") >= 9)
+            return bool(prefix) and not b"FLV".startswith(prefix)  # 不接受截断的 FLV 签名。
         finally:
             response.close()
     except Exception:  # noqa: BLE001
@@ -404,7 +413,15 @@ def _app_play_urls(room_id: str, quality: int, codec: str = "avc") -> tuple[list
     H.264 取 FLV 通道（给播放器直连）；HEVC / AV1 只有 HLS 通道，取回来要
     由 libmpv 直接读取分片（见 :func:`_app_profile`）。
     """
-    protocol = _app_protocol(codec)
+    return _app_stream_urls(room_id, quality, codec, _app_protocol(codec))
+
+
+def _app_hls_play_urls(room_id: str, quality: int, codec: str = "avc") -> tuple[list[str], int]:
+    """FLV 不可用时尝试同编码的原生 HLS，不改写 CDN 的播放地址。"""
+    return _app_stream_urls(room_id, quality, codec, "http_hls")
+
+
+def _app_stream_urls(room_id: str, quality: int, codec: str, protocol: str) -> tuple[list[str], int]:
     streams = _app_play_info(room_id, quality, codec).get("stream") or []
     for stream in streams:
         if stream.get("protocol_name") != protocol:
@@ -433,7 +450,8 @@ def play_url(room_id: str, quality: int = 250,
     """取可播放的 http 流地址，附带接口实际给到的画质。
 
     优先用尊重画质的 app-room 接口（App UA、不带 Referer 拉流）；
-    失败时退回 web 端接口（Chrome UA + Referer）。保留 CDN 的 URL 协议。
+    失败时退回 web 端接口（Chrome UA + Referer），再尝试同编码 HLS。
+    FLV 只声明音频时拒绝该地址。保留 CDN 的 URL 协议。
 
     返回 ``(地址, 实际画质, 通道名, 请求头)``。请求头必须一起带走：插件要
     拿这个地址去录像，头不对 CDN 直接 403。
@@ -453,6 +471,7 @@ def play_url(room_id: str, quality: int = 250,
     sources = [(_app_play_urls, _app_profile(codec), STREAM_APP)]
     if codec not in HLS_ONLY_CODECS:
         sources.append((_web_play_urls, "web", STREAM_WEB))
+        sources.append((_app_hls_play_urls, f"app{HLS_SUFFIX}-{codec}", STREAM_APP))
     errors = []
     for source, profile, headers in sources:
         if _cancelled():

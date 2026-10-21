@@ -27,7 +27,8 @@ class BilibiliCatchupTests(unittest.TestCase):
         self.player = TilePlayer(self.widget)
         self.commands = []
         self.core = SimpleNamespace(
-            speed=1.0, time_pos=10.0, demuxer_cache_state={"cache-end": 14.0},
+            speed=1.0, time_pos=10.0, video_params={"w": 1920, "h": 1080},
+            demuxer_cache_state={"cache-end": 14.0},
             vo_configured=True, paused_for_cache=False, seeking=False,
             eof_reached=False, idle_active=False,
             command=lambda *args: self.commands.append(args), terminate=lambda: None,
@@ -59,6 +60,22 @@ class BilibiliCatchupTests(unittest.TestCase):
         self.assertEqual(self.core.speed, 1.3, "积压 4 秒时应自动加速至 1.3 倍")
         self.assertEqual([c for c in self.commands if c[0] != "stop"],
                          [("loadfile", "https://cdn.example.test/live.flv", "replace")])
+
+    def test_audio_clock_and_placeholder_window_do_not_enable_catchup(self):
+        self.play()
+        self.core.video_params = None
+        self.tick(8)
+        self.assertEqual(self.core.speed, 1.0, "音频前进和占位窗口不能代替真实视频帧")
+
+    def test_audio_only_stream_is_not_reported_as_video_playback(self):
+        self.core.video_params = None
+        self.play()
+        for _ in range(6):
+            self.core.time_pos += 1
+            self.player._check()
+        self.assertEqual(self.player.state, "error", "有声无画面也必须进入原有重连流程")
+        self.assertIsNone(self.player._picture_signature())
+
 
     def test_speed_tiers_and_recovery_follow_forward_buffer(self):
         self.play()

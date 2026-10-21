@@ -199,7 +199,8 @@ def check_codec_fallback() -> None:
             pass
         else:
             raise AssertionError("所有通道都不可用时应报错收尾")
-    assert app.call_count == 2 and web.call_count == 1, "回退必须有限，不循环请求"
+    assert app.call_count == 3 and web.call_count == 1, \
+        "AV1 缺失后只尝试 H.264 FLV、Web、HLS 各一次，不循环请求"
 
     cancelled = Mock(side_effect=[False, True])
     with patch.object(bili, "_app_play_info", return_value={}) as app:
