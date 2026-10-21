@@ -219,6 +219,7 @@
 | 脚本 | 执行分类 |
 | --- | --- |
 | [check_preview_live](../check_preview_live.py) | 单项执行前核对 |
+| [check_bili_catchup_live](../check_bili_catchup_live.py) | `live`；显式指定房间，验证解码帧和 D3D11 截图，不读取账号 |
 | [selfcheck_audio_audit](../selfcheck_audio_audit.py) | 单项执行前核对 |
 | [selfcheck_audio_cycle_shortcut](../selfcheck_audio_cycle_shortcut.py) | 单项执行前核对 |
 | [selfcheck_audio_hotplug](../selfcheck_audio_hotplug.py) | 单项执行前核对 |

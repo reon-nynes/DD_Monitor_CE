@@ -111,7 +111,8 @@ def unit(app):
     assert all(mode in HWDEC for mode in ("auto", "d3d11va", "d3d11va-copy", "dxva2", "none"))
     assert decode_media_options("d3d11va-copy") == ("hwdec=d3d11va-copy",)
     stalled = TilePlayer(widget)
-    props = {"vo-configured": True, "demuxer-cache-state": {"cache-end": 1}}
+    props = {"vo-configured": True, "video-params": {"w": 1920, "h": 1080},
+             "demuxer-cache-state": {"cache-end": 1}}
     stalled._prop = lambda name, default=None: props.get(name, default)
     with patch.object(stalled, "_play_media"):
         stalled.play("https://example.test/live")

@@ -327,6 +327,7 @@ class TilePlayer(QObject):
         speed = 1.0
         if (self._media is not None and not self.paused and self.state == "playing"
                 and self._prop("vo-configured", False)
+                and self._prop("video-params")
                 and not any(self._prop(flag, False) for flag in
                             ("paused-for-cache", "seeking", "eof-reached", "idle-active"))):
             cache = self._prop("demuxer-cache-state", {})
@@ -372,7 +373,8 @@ class TilePlayer(QObject):
             self.autoQualityRequested.emit(quality)
 
     def _picture_signature(self):
-        if self._media is None or not self._prop("vo-configured", False):
+        if (self._media is None or not self._prop("vo-configured", False)
+                or not self._prop("video-params")):
             return None
         position = self._prop("time-pos")
         return None if position is None else (position, position)
@@ -452,7 +454,8 @@ class TilePlayer(QObject):
         advanced = current is not None and (self._last_time is None or current > self._last_time)
         self._last_time = current
         ended = self._prop("eof-reached", False) or self._prop("idle-active", False)
-        if advanced and not ended and self._prop("vo-configured", False):
+        if (advanced and not ended and self._prop("vo-configured", False)
+                and self._prop("video-params")):
             self._stall_ticks = 0
             if self.state != "frozen":
                 self._set_state("playing")

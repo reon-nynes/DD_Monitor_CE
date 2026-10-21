@@ -33,6 +33,7 @@
 ### 专项检查脚本
 
 - `dev/check_emoticon_live.py`
+- `dev/check_bili_catchup_live.py`
 - `dev/check_live_danmaku_motion.py`
 - `dev/check_live_restore.py`
 - `dev/check_medal_size.py`

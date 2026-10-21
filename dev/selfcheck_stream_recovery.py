@@ -12,11 +12,15 @@ from ddm import bili  # noqa: E402
 class Response:
     status_code = 200
 
+    def __init__(self, chunks=None):
+        self.chunks = chunks if chunks is not None else [b"FLV\x01\x05\x00\x00\x00\x09"]
+        self.closed = False
+
     def iter_content(self, _size):
-        yield b"FLV"
+        yield from self.chunks
 
     def close(self):
-        pass
+        self.closed = True
 
 
 class JsonResponse:
@@ -28,12 +32,50 @@ class JsonResponse:
 
 
 def main() -> None:
+    # HTTP 200 不能证明有视频：实际故障房间返回 flags=4 的纯 AAC FLV。
+    for chunks, expected in (([b"FLV\x01\x04\x00\x00\x00\x09"], False),
+                              ([b"FL", b"V\x01\x05", b"\x00\x00\x00\x09"], True),
+                              ([b"FLV\x01\x01\x00\x00\x00\x09"], True),
+                              ([b"F"], False), ([b"FL"], False), ([b"FLV"], False),
+                              ([], False), ([b"#EXTM3U\n"], True)):
+        response = Response(chunks)
+        with mock.patch.object(bili.requests, "get", return_value=response):
+            actual = bili._fetchable("http://cdn/live.flv", bili.STREAM_APP)
+        assert actual == expected, (chunks, "流探测必须拒绝仅音频或截断的 FLV", actual)
+        assert response.closed, "探测成功或拒绝响应后都必须关闭连接"
+
     with mock.patch.object(bili.requests, "get", return_value=Response()) as get:
         assert bili._fetchable("http://cdn/live.flv", bili.STREAM_APP)
         assert "cookies" not in get.call_args.kwargs, \
             "探测请求不能用播放器没有发送的登录 cookie"
 
     candidates = ["https://cdn-a/live.flv", "https://cdn-b/live.flv"]
+    responses = [Response([b"FLV\x01\x04\x00\x00\x00\x09"]), Response()]
+    with mock.patch.object(bili, "_app_play_urls", new=lambda room, qn, codec: ([candidates[0]], 250)), \
+         mock.patch.object(bili, "_web_play_urls", new=lambda room, qn, codec: ([candidates[1]], 250)), \
+         mock.patch.object(bili.requests, "get", side_effect=responses):
+        selected = bili.play_url("1001", 250)
+    assert selected == (candidates[1], 250, "web", dict(bili.STREAM_WEB)), \
+        "App 的纯音频 FLV 应继续尝试有视频的备用通道"
+    assert all(response.closed for response in responses)
+
+    # 两个 FLV 通道均只有声音时，仍有同编码的 HLS 可以观看。
+    audio = b"FLV\x01\x04\x00\x00\x00\x09"
+    hls_payload = {"data": {"playurl_info": {"playurl": {"stream": [{
+        "protocol_name": "http_hls", "format": [{"format_name": "fmp4", "codec": [{
+            "codec_name": "avc", "base_url": "/live.m3u8", "current_qn": 10000,
+            "url_info": [{"host": "https://hls.example.test", "extra": ""}],
+        }]}],
+    }]}}}}
+    with mock.patch.object(bili, "_app_play_urls", new=lambda room, qn, codec: ([candidates[0]], 250)), \
+         mock.patch.object(bili, "_web_play_urls", new=lambda room, qn, codec: ([candidates[1]], 250)), \
+         mock.patch.object(bili, "_app_play_info", return_value=hls_payload["data"]["playurl_info"]["playurl"]), \
+         mock.patch.object(bili.requests, "get", side_effect=[
+             Response([audio]), Response([audio]), Response([b"#EXTM3U\n"])]):
+        hls = bili.play_url("1001", 250)
+    assert hls == ("https://hls.example.test/live.m3u8", 10000, "app-hls-avc", dict(bili.STREAM_APP)), \
+        "HLS 回退需保留真实编码、画质和请求头"
+
     app_payload = {"data": {"playurl_info": {"playurl": {"stream": [{
         "protocol_name": "http_stream", "format": [{"codec": [{
             "base_url": "/live.flv", "current_qn": 250,
