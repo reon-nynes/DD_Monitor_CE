@@ -230,6 +230,8 @@
 | [selfcheck_auto_quality_live](../selfcheck_auto_quality_live.py) | 单项执行前核对 |
 | [selfcheck_auto_quality_switch_live](../selfcheck_auto_quality_switch_live.py) | 单项执行前核对 |
 | [selfcheck_bili_codec](../selfcheck_bili_codec.py) | `offline` |
+| [selfcheck_bili_catchup](../selfcheck_bili_catchup.py) | `offline`；合成播放器属性，不打开媒体或读取账号 |
+| [selfcheck_bili_catchup_native](../selfcheck_bili_catchup_native.py) | `native`；FFmpeg 合成带音频 FLV、本机 HTTP 与 libmpv，无真实直播 |
 | [selfcheck_bili_quality](../selfcheck_bili_quality.py) | 单项执行前核对 |
 | [selfcheck_douyin_stream_fallback](../selfcheck_douyin_stream_fallback.py) | 单项执行前核对 |
 | [selfcheck_mpv](../selfcheck_mpv.py) | `native` |

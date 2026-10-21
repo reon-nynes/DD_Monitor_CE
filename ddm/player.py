@@ -1,4 +1,5 @@
 """每个画面独立的 libmpv 播放、音频与故障恢复。"""
+import math
 import os
 import sys
 import time
@@ -9,7 +10,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 
 from .audio_output import channel_filters, linear_volume
 from .auto_quality import AutoQuality
-from .bili import APP_UA, UA, is_hls_profile
+from .bili import APP_UA, BILI_PROFILES, UA, is_hls_profile
 from .config import DECODE_HWDEC as HWDEC
 from .config import DECODE_MODES as DECODE_MODES  # noqa: PLC0414
 
@@ -97,6 +98,11 @@ class TilePlayer(QObject):
         self._stall_ticks = 0
         self._picture_limit = self.FROZEN_TICKS
         self._buffer_limit = 6
+        self._live_catchup = False
+        self._catchup_speed = 1.0
+        self._catchup_watch = QTimer(self)
+        self._catchup_watch.setInterval(300)
+        self._catchup_watch.timeout.connect(self._check_live_catchup)
         self._watch = QTimer(self)
         self._watch.setInterval(1500)
         self._watch.timeout.connect(self._check)
@@ -200,6 +206,10 @@ class TilePlayer(QObject):
         self._set_state("connecting")
         self._watch.start()
         self._picture_watch.start()
+        self._live_catchup = (not self.silent and profile in BILI_PROFILES
+                             and url.startswith(("http://", "https://")))
+        if self._live_catchup:
+            self._catchup_watch.start()
         refresh_clip = getattr(self.video_widget, "refresh_clip", None)
         if callable(refresh_clip):
             refresh_clip()
@@ -210,6 +220,9 @@ class TilePlayer(QObject):
             self._set("pause", self.paused)
 
     def _stop_media(self):
+        self._catchup_watch.stop()
+        self._set_catchup_speed(1.0)
+        self._live_catchup = False
         if self.player is not None:
             self.player.command("stop")
         if self._hls_proxy is not None:
@@ -286,6 +299,8 @@ class TilePlayer(QObject):
 
     def set_paused(self, paused: bool) -> None:
         self.paused = bool(paused)
+        if self.paused:
+            self._set_catchup_speed(1.0)
         self._set("pause", self.paused)
         if self.auto_quality is not None:
             self.auto_quality.stable_since = self.auto_quality.stalled_since = None
@@ -296,6 +311,36 @@ class TilePlayer(QObject):
         elif self._media is not None:
             self._watch.start()
             self._picture_watch.start()
+
+    def _set_catchup_speed(self, speed: float) -> None:
+        if speed == self._catchup_speed:
+            return
+        try:
+            self._set("speed", speed)
+        except (AttributeError, RuntimeError, ValueError):
+            return  # 媒体切换/关闭期间属性可能暂不可写，下轮再试。
+        self._catchup_speed = speed
+
+    def _check_live_catchup(self) -> None:
+        if self._released or not self._live_catchup:
+            return
+        speed = 1.0
+        if (self._media is not None and not self.paused and self.state == "playing"
+                and self._prop("vo-configured", False)
+                and not any(self._prop(flag, False) for flag in
+                            ("paused-for-cache", "seeking", "eof-reached", "idle-active"))):
+            cache = self._prop("demuxer-cache-state", {})
+            end = cache.get("cache-end") if isinstance(cache, dict) else None
+            position = self._prop("time-pos")
+            if all(isinstance(value, (int, float)) and not isinstance(value, bool)
+                   and math.isfinite(value) for value in (end, position)):
+                # 与直播脚本的 buffered.end - currentTime 对应；目标为 1.5 秒。
+                buffered = end - position
+                for threshold, rate in ((3.5, 1.3), (2.5, 1.2), (1.5, 1.1)):
+                    if buffered > threshold:
+                        speed = rate
+                        break
+        self._set_catchup_speed(speed)
 
     @property
     def actual_decoder(self) -> str:

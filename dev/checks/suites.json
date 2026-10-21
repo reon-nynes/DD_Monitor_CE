@@ -71,7 +71,8 @@
       "selfcheck_video_danmaku",
       "selfcheck_stream_recovery",
       "selfcheck_mobile_share",
-      "selfcheck_setup"
+      "selfcheck_setup",
+      "selfcheck_bili_catchup"
     ]
   },
   "native": {
@@ -82,6 +83,7 @@
       "selfcheck_account_login_reopen",
       "selfcheck_mpv",
       "selfcheck_mpv_com_lifetime",
+      "selfcheck_bili_catchup_native",
       "selfcheck_resize_surface",
       "selfcheck_resize_widgets",
       "selfcheck_window_resize",
