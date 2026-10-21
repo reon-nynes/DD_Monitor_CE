@@ -23,6 +23,10 @@ DD 监控室 CE 是 [DD监控室](https://gitee.com/zhimingshenjun/DD_Monitor_la
 
 ## 第三方组件
 
+- B 站自动追帧的缓冲目标与倍速阶梯参考 c_b 的
+  [Bilibili直播自动追帧](https://github.com/c-basalt/bilibili-live-seeker-script/)
+  （用户提供版本 0.7.18，脚本声明 GPLv3）。本项目按 libmpv 属性重新实现缓冲控制，
+  不包含该用户脚本、网页注入、GM 配置或网络 hook 代码。
 - `blivedm/`：B 站直播弹幕协议库，上游 https://github.com/xfgryujk/blivedm 。
   这份是从原仓库带过来的，**仓库里没有附带它的许可文件**；如果以后要对外分发，需要补上上游的许可。
 - libmpv：随包提供 shinchiro 的 Windows x64 构建；固定版本、下载地址、DLL 和

@@ -67,3 +67,29 @@ python dev/run_checks.py --script selfcheck_account_login_reopen --timeout 45
 ## 直播间音量与静音
 
 `python dev/run_checks.py --script selfcheck_room_audio` 使用合成直播间和播放器替身，覆盖换台、普通拖拽互换、播放中热交换、缩小布局补位、移出后重新加入及重启恢复。音量和静音按直播间保存在 `room_audio`，兼容旧版 `wall` 配置；首次加入使用默认声音，声道仍按位置保留。全屏独占声音的临时静音不覆盖保存值。
+
+## B 站自动追帧
+
+```powershell
+python dev/run_checks.py --script selfcheck_bili_catchup
+python dev/run_checks.py --script selfcheck_bili_catchup_native --timeout 60
+```
+
+第一项使用播放器属性替身及真实 Qt 定时器，覆盖缓冲阶梯、异常读数、暂停/恢复、
+缓冲/跳转/结束状态、跨通道换流、预览和释放后的回调；不打开媒体、不读取账号。
+第二项需要 FFmpeg 与 libmpv，通过本机 HTTP 服务按真实时间发送合成的带音频 FLV，
+先提供约 4 秒积压，验证播放实际加速、缓冲消化至目标后恢复 1 倍速；
+使用非零起始时间戳，且测试结束前持续供流，无真实直播请求或音频输出。
+
+追帧仅对 B 站 `app`/`web` 及其 HLS 编码通道的 HTTP(S) 主播放器自动启用，
+每 300 毫秒检查一次 `demuxer-cache-state.cache-end - time-pos`。
+缓冲超过 1.5、2.5、3.5 秒时分别使用 1.1、1.2、1.3 倍速；
+回到 1.5 秒及以下时恢复正常速度。暂停、缓冲、跳转、结束、读数缺失和换流也恢复正常速度。
+低缓冲时使用正常速度，由 libmpv 的缓冲机制处理；不采用原脚本最低 0.1 倍的自动减速。
+预览、其他平台和本地文件不启用；这版没有新增设置项或强制跳帧。
+本功能位于核心播放器，既有插件控件、账号与弹幕交互接口保持原有职责。
+
+这些读数是本机已接收的前向缓冲估计，属性语义见 [mpv 手册](https://mpv.io/manual/stable/)；
+1.5 秒是目标缓冲长度，不代表主播到观众的端到端延迟。
+主播推流、转码、CDN 和 HLS 分片产生的上游延迟无法由本机倍速追帧消除。
+真实 B 站 FLV/HLS 的延迟改善、弱网稳定性、多窗负载和加速期间的音频听感仍需人工实播验收。

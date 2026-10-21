@@ -48,7 +48,8 @@
       "selfcheck_sidebar_text_theme",
       "selfcheck_video_danmaku_controls",
       "selfcheck_video_danmaku",
-      "selfcheck_stream_recovery"
+      "selfcheck_stream_recovery",
+      "selfcheck_bili_catchup"
     ]
   },
   "native": {
@@ -57,6 +58,7 @@
     "scripts": [
       "selfcheck_account_login_reopen",
       "selfcheck_mpv",
+      "selfcheck_bili_catchup_native",
       "selfcheck_resize_surface",
       "selfcheck_resize_widgets",
       "selfcheck_window_resize",
