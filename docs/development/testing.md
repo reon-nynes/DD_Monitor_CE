@@ -19,7 +19,7 @@
 
 ```powershell
 python dev/run_checks.py --list
-python dev/run_checks.py --script selfcheck_emoticon_tabs
+python dev/run_checks.py --script selfcheck_plugin_controls
 python dev/run_checks.py --script check_live_restore -- 6
 python dev/run_checks.py --script check_live_danmaku_motion -- --room 6 --backend animator
 ```
@@ -42,3 +42,29 @@ Windows 也可将 `python dev/run_checks.py` 换为 `dev\run-checks.cmd`。入�
 性能测量见[性能工具](../../dev/benchmarks/README.md)，资源生成见[辅助工具](../../dev/tools/README.md)。发布构建入口继续使用 `dev/build_release.ps1`。
 
 PR 测试和整理过程的历史记录位于 [archive/](../archive/README.md)，版本说明位于 [releases/](../releases/RELEASE-v0.4.md)。
+
+## B 站自动追帧
+
+```powershell
+python dev/run_checks.py --script selfcheck_bili_catchup
+python dev/run_checks.py --script selfcheck_bili_catchup_native --timeout 60
+```
+
+第一项使用播放器属性替身及真实 Qt 定时器，覆盖缓冲阶梯、异常读数、暂停/恢复、
+缓冲/跳转/结束状态、跨通道换流、预览和释放后的回调；不打开媒体、不读取账号。
+第二项需要 FFmpeg 与 libmpv，通过本机 HTTP 服务按真实时间发送合成的带音频 FLV，
+先提供约 4 秒积压，验证播放实际加速、缓冲消化至目标后恢复 1 倍速；
+使用非零起始时间戳，且测试结束前持续供流，无真实直播请求或音频输出。
+
+追帧仅对 B 站 `app`/`web` 及其 HLS 编码通道的 HTTP(S) 主播放器自动启用，
+每 300 毫秒检查一次 `demuxer-cache-state.cache-end - time-pos`。
+缓冲超过 1.5、2.5、3.5 秒时分别使用 1.1、1.2、1.3 倍速；
+回到 1.5 秒及以下时恢复正常速度。暂停、缓冲、跳转、结束、读数缺失和换流也恢复正常速度。
+低缓冲时使用正常速度，由 libmpv 的缓冲机制处理；不采用原脚本最低 0.1 倍的自动减速。
+预览、其他平台和本地文件不启用；这版没有新增设置项或强制跳帧。
+本功能位于核心播放器，既有插件控件、账号与弹幕交互接口保持原有职责。
+
+这些读数是本机已接收的前向缓冲估计，属性语义见 [mpv 手册](https://mpv.io/manual/stable/)；
+1.5 秒是目标缓冲长度，不代表主播到观众的端到端延迟。
+主播推流、转码、CDN 和 HLS 分片产生的上游延迟无法由本机倍速追帧消除。
+真实 B 站 FLV/HLS 的延迟改善、弱网稳定性、多窗负载和加速期间的音频听感仍需人工实播验收。
