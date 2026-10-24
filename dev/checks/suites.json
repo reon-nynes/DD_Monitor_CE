@@ -58,6 +58,7 @@
     "description": "Windows 原生窗口与播放器；可能显示窗口或操作光标，需 libmpv",
     "scripts": [
       "selfcheck_account_login_reopen",
+      "selfcheck_badge_memory",
       "selfcheck_mpv",
       "selfcheck_bili_catchup_native",
       "selfcheck_resize_surface",
